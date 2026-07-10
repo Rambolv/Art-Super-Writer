@@ -1114,6 +1114,7 @@ async function loadRhythmFromDisk(projectName){
 async function loadCharactersFromDisk(projectName){
   const p = DB.projects[projectName];
   if(!p) return false;
+  // ★ 从 characterProfiles/characters.json 读取全部角色（单一数据源）
   const content = await readFileFromDiskLatest(projectName, 'characterProfiles', 'characters.json');
   if(content){
     try {
@@ -1171,6 +1172,8 @@ async function syncProjectFromDisk(projectName){
   await loadProjectLogFromDisk(projectName);
   // ★ 加载审查状态（审查历史/最后一次审查/连续性指标）
   await loadReviewState(projectName);
+  // ★ 加载故事状态（角色位置/情节线/伏笔/时间线）
+  await loadStoryState(projectName);
   if(loaded) p.analyzed = true;
   return loaded;
 }
@@ -1729,11 +1732,21 @@ async function analyzeProject(name){
 
     toast('🧠 第3轮：角色印象...');
     logAnalysis('第4步-第3轮', '角色印象分析', '');
-    conversation.push({role:'user', content:'请识别出故事中所有出现过的角色，一个都不要漏。对每个角色标注ta是主角、反派、配角还是主要角色。然后逐一给出：一句话评价、最大特点（举例）、遇到困难时的应对方式、做决定时的风格、倾向稳赚还是冒险、最在意什么和最怕什么、和谁亲近和谁冲突、言行是否一致（有没有出人意料的行为，是否合理）、如果要让ta做违背本性的事需要什么前提。用自然语言回答。'});
+    const pRef = DB.projects[name];
+    const customPrompt = pRef?._useCustomCharPrompt;
+    const defaultPrompt = '请识别出故事中所有出现过的角色，一个都不要漏。对每个角色标注ta是主角、反派、配角还是主要角色。然后逐一给出：一句话评价、最大特点（举例）、遇到困难时的应对方式、做决定时的风格、倾向稳赚还是冒险、最在意什么和最怕什么、和谁亲近和谁冲突、言行是否一致（有没有出人意料的行为，是否合理）、如果要让ta做违背本性的事需要什么前提。用自然语言回答。';
+    const charPrompt = customPrompt ? defaultPrompt + '\n\n【额外要求】\n' + customPrompt : defaultPrompt;
+    conversation.push({role:'user', content:charPrompt});
+    if(customPrompt) logAnalysis('自定义提示词', '', customPrompt.substring(0,200));
     let r3 = await callLLM(conversation, {max_tokens:8192, temperature:0.7});
     logAnalysis('第3轮 回复', '', r3);
     conversation.push({role:'assistant', content:r3});
     saveFileToDiskV(name, 'projectLog', '分析报告_第3轮_角色印象.md', r3, av);
+    // ★ 如果是自定义分析，额外保存完整分析文本到 characters/custom_analysis.md
+    if(customPrompt){
+      saveFileToDisk(name, 'characters', 'custom_analysis.md', r3);
+      logAnalysis('自定义分析', '已保存完整分析文本', r3.length+'字');
+    }
 
     toast('🧠 第4轮：整体感受...');
     logAnalysis('第4步-第4轮', '整体感受', '');
@@ -1811,6 +1824,24 @@ async function analyzeProject(name){
       let cid=null; for(const[id,cd] of Object.entries(p.characters||{})) if(cd.name===nm){cid=id;break}
       if(!cid){cid='char_'+String(Object.keys(p.characters||{}).length+1).padStart(3,'0'); if(!p.characters) p.characters={}; p.characters[cid]={name:nm,role:'未知',current_location:'未知',emotional_state:'平静'};}
       Object.assign(p.characters[cid],{role:info.role,reader_tag:info.tag,traits:info.traits,decision_style:info.decision_style,risk_attitude:info.risk_attitude,cares_about:info.cares_about,fears:info.fears,bottom_line:info.bottom_line,relationships:info.relationships,trust_pattern:info.trust_pattern,conflict_style:info.conflict_style,consistency_issues:info.consistency_issues,breaking_point:info.breaking_point,behavioral_model:info.behavioral_model});
+      // ★ 从原始分析文本提取该角色的段落
+      if(r3){
+        const r3lines = r3.split('\n');
+        let charSection = [], inChar = false, foundHeader = false;
+        for(const line of r3lines){
+          // 角色标题行：匹配 【名】、## 名、# XXX：名 等格式
+          const isHeader = line.includes('【'+nm+'】') || new RegExp('^##?\\s+[^：:]*[：:]?\\s*'+nm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(line);
+          if(isHeader){ inChar = true; foundHeader = true; charSection.push(line); continue; }
+          // 退出条件：遇到下一个角色标题（以 # 或 【 开头且不含当前角色名）
+          if(inChar && foundHeader && !line.includes(nm) && (line.startsWith('【') || /^#\s/.test(line))){ inChar = false; break; }
+          if(inChar) charSection.push(line);
+        }
+        if(charSection.length > 2) p.characters[cid]._rawAnalysis = charSection.join('\n').trim();
+      }
+      // ★ 保存角色数据到本地磁盘（独立文件供分析结果按钮读取）
+      saveFileToDisk(name, 'characters', nm+'.json', p.characters[cid]);
+      // ★ 同步更新 characterProfiles/characters.json（LLM注入数据源）
+      saveFileToDisk(name, 'characterProfiles', 'characters.json', p.characters);
       p.folders.characterProfiles[nm+'_读者印象.md']='# '+nm+' 读者印象\n\n'+(info.tag||'')+'\n\n## 角色定位\n'+(info.role||'')+'\n\n## 特点\n'+(info.traits||[]).map(t=>'- '+t).join('\n')+'\n\n## 行事风格\n'+(info.decision_style||'')+'\n\n## 风险态度\n'+(info.risk_attitude||'')+'\n\n## 在意\n'+(info.cares_about||[]).join('、')+'\n\n## 害怕\n'+(info.fears||[]).join('、')+'\n\n## 底线\n'+(info.bottom_line||'')+'\n\n## 关系\n'+Object.entries(info.relationships||{}).map(([k,v])=>'- '+k+': '+v).join('\n')+'\n\n## 信任模式\n'+(info.trust_pattern||'')+'\n\n## 冲突处理\n'+(info.conflict_style||'')+'\n\n## 一致性问题\n'+(info.consistency_issues||[]).map(i=>'- ⚠️ '+i).join('\n')+'\n\n## 突破底线\n'+(info.breaking_point||'')+'\n\n## 行为模型\n'+(info.behavioral_model||'');
     }
 
@@ -1819,6 +1850,8 @@ async function analyzeProject(name){
 
     // ★ 连续性指标（初始计算，供节奏控制台展示）
     p.continuity = computeContinuityMetrics(p);
+    // ★ 构建并保存故事状态
+    await saveStoryState(name);
 
     // 备忘录 & 技能
     if(data.memo) p.writerMemo=data.memo;
@@ -1860,6 +1893,20 @@ async function analyzeProject(name){
       console.error(e);
     }
   }
+}
+
+// ─── 自定义AI分析（使用已保存的自定义提示词） ───
+async function analyzeProjectCustom(name){
+  const p = DB.projects[name];
+  if(!p){toast('项目不存在','error');return}
+  const customPrompt = p._customCharPrompt || localStorage.getItem('customCharPrompt_'+name);
+  if(!customPrompt){toast('请先在右侧面板中编写自定义分析提示词','error');return}
+  logAnalysis('自定义分析', '使用自定义提示词', customPrompt.substring(0,100));
+  // 调用标准分析流程，但注入自定义提示词
+  // 暂存自定义提示词，analyzeProject 第3轮会检测并使用
+  p._useCustomCharPrompt = customPrompt;
+  await analyzeProject(name);
+  p._useCustomCharPrompt = null;
 }
 
 // ═══════ 人类行为规律总结（写作时注入 Writer） ═══════
@@ -1917,21 +1964,27 @@ function getWriterContext(projectName){
     context += `【角色行为模型——写作时必须严格遵守】\n`;
     charValues.forEach(ch=>{
       context += `\n【${ch.name}】${ch.reader_tag||ch.tag||''}\n`;
+      // ★ 始终发送 behavioral_model（如有）
       if(ch.behavioral_model){
         context += `行为模式：${ch.behavioral_model}\n`;
-      } else {
-        // 如果没有behavioral_model（旧数据），从已有字段合成
-        const parts = [];
-        if(ch.decision_style) parts.push(`做决定${ch.decision_style}`);
-        if(ch.risk_attitude) parts.push(`面对得失${ch.risk_attitude}`);
-        if(ch.trust_pattern) parts.push(`信任倾向：${ch.trust_pattern}`);
-        if(ch.conflict_style) parts.push(`冲突处理：${ch.conflict_style}`);
-        if(ch.bottom_line) parts.push(`底线：${ch.bottom_line}`);
-        if(ch.breaking_point) parts.push(`突破底线的条件：${ch.breaking_point}`);
-        if(parts.length) context += `行为模式：${parts.join('；')}\n`;
       }
+      // ★ 始终发送各维度细节（即使已有 behavioral_model，也不省略）
+      const parts = [];
+      if(ch.decision_style) parts.push(`做决定${ch.decision_style}`);
+      if(ch.risk_attitude) parts.push(`面对得失${ch.risk_attitude}`);
+      if(ch.trust_pattern) parts.push(`信任倾向：${ch.trust_pattern}`);
+      if(ch.conflict_style) parts.push(`冲突处理：${ch.conflict_style}`);
+      if(ch.bottom_line) parts.push(`底线：${ch.bottom_line}`);
+      if(ch.breaking_point) parts.push(`突破底线的条件：${ch.breaking_point}`);
+      if(parts.length) context += `行为细节：${parts.join('；')}\n`;
+      // ★ traits 漏发
+      if(ch.traits && ch.traits.length) context += `性格标签：${ch.traits.join('、')}\n`;
       if(ch.cares_about && ch.cares_about.length) context += `在意的：${ch.cares_about.join('、')}\n`;
       if(ch.fears && ch.fears.length) context += `恐惧的：${ch.fears.join('、')}\n`;
+      // ★ relationships 漏发
+      if(ch.relationships && Object.keys(ch.relationships).length){
+        context += `关系网：${Object.entries(ch.relationships).map(([k,v])=>`${k}(${v})`).join('、')}\n`;
+      }
       if(ch.consistency_issues && ch.consistency_issues.length) context += `⚠️ 需注意的一致性：${ch.consistency_issues.join('；')}\n`;
     });
     context += '\n';
@@ -1981,6 +2034,56 @@ function getWriterContext(projectName){
     if(skills.overall_advice){
       context += `【综合建议】\n${skills.overall_advice}\n\n`;
     }
+  }
+
+  // 6. ★ 故事状态（角色位置/情节线/伏笔/时间线）
+  const ss = p.storyState;
+  if(ss?.characters){
+    const activeChars = Object.values(ss.characters).filter(c=>c.lastAppearance > 0);
+    if(activeChars.length){
+      context += `【角色当前状态】\n`;
+      activeChars.forEach(c=>{
+        const st = c.status==='dead'?'💀':c.status==='missing'?'❓':'';
+        context += `· ${st} ${c.name} 位于「${c.currentLocation}」，情绪「${c.emotionalState}」，最近出场第${c.lastAppearance}章\n`;
+      });
+      context += '\n';
+    }
+    const deadChars = Object.values(ss.characters).filter(c=>c.status==='dead');
+    if(deadChars.length){
+      context += `【已死亡角色（⚠️ 非硬性规定——作者若已设伏笔/悬疑/或明确要求复活则可）】\n`;
+      deadChars.forEach(c=>{
+        context += `· 💀 ${c.name}（死于第${c.lastAppearance}章附近）\n`;
+      });
+      context += `注意：这只是当前标记，不限制你发挥。如果故事需要、作者有伏笔铺垫或明确指示，完全可以让角色复活或出现于闪回/幻觉/平行叙事中。\n\n`;
+    }
+  }
+  if(ss?.plotThreads){
+    const active = Object.values(ss.plotThreads).filter(t=>t.status==='active');
+    if(active.length){
+      context += `【进行中的情节线】\n`;
+      active.forEach(t=>{
+        context += `· ${t.name}（引入第${t.introducedChapter}章）\n`;
+      });
+      context += '\n';
+    }
+  }
+  if(ss?.foreshadowingBank){
+    const pending = ss.foreshadowingBank.filter(b=>!b.resolved);
+    if(pending.length){
+      context += `【待回收伏笔】\n`;
+      pending.forEach(b=>{
+        context += `· 第${b.plantedChapter}章埋下：${b.foreshadow}（${b.urgency}优先级）\n`;
+      });
+      context += '\n';
+    }
+  }
+  if(ss?.timeline?.length){
+    context += `【时间线概览】\n`;
+    const recent = ss.timeline.slice(-5);
+    recent.forEach(t=>{
+      context += `· 第${t.chapter}章（第${t.day}天）：${t.summary.substring(0,40)}\n`;
+    });
+    context += '\n';
   }
 
   return context;
@@ -2393,6 +2496,58 @@ renderers.tension = function(){
     html += `<div style="font-size:11px;color:var(--green);padding:4px 0">✅ 故事状态健康，无待处理问题</div>`;
   }
 
+  <!-- ═══ 故事状态摘要（story_state.json） ═══ -->
+  const ss = p?.storyState;
+  if(ss?.characters){
+    html += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06)">`;
+    html += `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <span class="card-title" style="margin:0;font-size:12px">📋 故事状态快照</span>
+      <span style="font-size:9px;color:var(--text-dim)">上次更新: ${new Date(ss.updatedAt).toLocaleString('zh-CN')}</span>
+    </div>`;
+    const chars = Object.values(ss.characters);
+    html += `<details open><summary style="cursor:pointer;font-size:10px;color:var(--text-dim);margin-bottom:4px">👥 角色 (${chars.length})</summary>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px">`;
+    chars.forEach(c=>{
+      const st = c.status==='dead'?'💀':c.status==='missing'?'❓':'🟢';
+      const age = (p?.chapters?.length||1) - (c.lastAppearance||0);
+      const ageNote = age>5 ? `⚠️${age}章未出场` : '';
+      html += `<div style="font-size:10px;padding:2px 4px;border-radius:4px;background:rgba(255,255,255,.03)">
+        ${st} <strong>${c.name}</strong> <span style="color:var(--text-dim)">${c.role}</span>
+        <div style="color:var(--text-dim)">📍${c.currentLocation} 😶${c.emotionalState} ${ageNote}</div>
+      </div>`;
+    });
+    html += `</div></details>`;
+    const threads = Object.values(ss.plotThreads||{});
+    if(threads.length){
+      html += `<details style="margin-top:4px"><summary style="cursor:pointer;font-size:10px;color:var(--text-dim);margin-bottom:2px">🌿 情节线 (${threads.length})</summary>`;
+      threads.forEach(t=>{
+        const icon = t.status==='resolved'?'✅':t.status==='dormant'?'💤':'🔄';
+        html += `<div style="font-size:10px;padding:1px 0">${icon} ${t.name} — ${t.status}</div>`;
+      });
+      html += `</details>`;
+    }
+    const buds = ss.foreshadowingBank?.filter(b=>!b.resolved)||[];
+    if(buds.length){
+      html += `<details style="margin-top:4px"><summary style="cursor:pointer;font-size:10px;color:var(--text-dim);margin-bottom:2px">🌱 待回收伏笔 (${buds.length})</summary>`;
+      buds.forEach(b=>{
+        const age = (p?.chapters?.length||1) - b.plantedChapter;
+        const urg = b.urgency==='高'?'🔴':b.urgency==='低'?'🟢':'🟡';
+        html += `<div style="font-size:10px;padding:1px 0">${urg} 第${b.plantedChapter}章: ${b.foreshadow} (${age}章前)</div>`;
+      });
+      html += `</details>`;
+    }
+    const tl = ss.timeline||[];
+    if(tl.length){
+      html += `<details style="margin-top:4px"><summary style="cursor:pointer;font-size:10px;color:var(--text-dim);margin-bottom:2px">📅 时间线 (${tl.length}章)</summary>`;
+      tl.slice(-3).forEach(t=>{
+        html += `<div style="font-size:10px;padding:1px 0"><strong>第${t.chapter}章</strong> — ${t.summary.substring(0,50)}</div>`;
+      });
+      if(tl.length>3) html += `<div style="font-size:10px;color:var(--text-dim)">...共${tl.length}章</div>`;
+      html += `</details>`;
+    }
+    html += `</div>`;
+  }
+
   html += `</div>`;
 
   main.innerHTML = html;
@@ -2407,9 +2562,342 @@ renderers.tension = function(){
       <div style="font-size:11px">👤 角色: ${cm?.characterHealth?.active||0}活跃 / ${(cm?.characterHealth?.absent||0)+(cm?.characterHealth?.neverAppeared||0)}问题</div>
       <div style="font-size:11px">🌿 情节: ${cm?.threadHealth?.stalled||0}条停滞</div>
       <div style="font-size:11px">🌱 伏笔: ${cm?.foreshadowingHealth?.overdue||0}个超期</div>
-    </div>
-  </div>`;
+      <hr class="sep" style="margin:6px 0">
+      <div style="font-size:11px;color:var(--text-dim)">📋 故事快照</div>`+
+      (p?.storyState?.characters ? (()=>{
+        const alive = Object.values(p.storyState.characters).filter(c=>c.status==='alive').length;
+        const dead = Object.values(p.storyState.characters).filter(c=>c.status==='dead').length;
+        const activeThreads = Object.values(p.storyState.plotThreads||{}).filter(t=>t.status==='active').length;
+        const pendingBuds = (p.storyState.foreshadowingBank||[]).filter(b=>!b.resolved).length;
+        return `<div style="font-size:10px;color:var(--text-dim)">👥 ${alive}活${dead?' 💀'+dead+'死':''} | 🌿 ${activeThreads}线 | 🌱 ${pendingBuds}伏笔</div>`;
+      })() : '')+
+    `</div></div>`;
 };
+
+// ─── 六芒星性格雷达图 ───
+const RADAR_LABELS = ['果断','冒险','信任','强硬','原则','忍耐'];
+// 从角色文本描述中估算六维度数值（1-10）
+function estimateRadarValues(ch){
+  const v = [5,5,5,5,5,5]; // 默认中等
+  const txt = [ch.decision_style||'', ch.risk_attitude||'', ch.trust_pattern||'', ch.conflict_style||'', ch.bottom_line||'', ch.breaking_point||'', ch.behavioral_model||''].join(' ');
+  const low = ['谨慎','犹豫','保守','回避','温和','多疑','不信任','软弱','让步','灵活','容忍','忍让','退让','胆小'];
+  const high = ['果断','激进','冒险','直接','强硬','坚定','信任','勇敢','强势','坚持','不留余地','冲动','极端','刚烈','激烈'];
+  const keyTxt = [ch.decision_style, ch.risk_attitude, ch.trust_pattern, ch.conflict_style, ch.bottom_line, ch.breaking_point].join(' ');
+  // 为每个维度打分
+  const pairs = [
+    [0, ['果断','激进','雷厉','直接','快速','坚定'], ['犹豫','纠结','拖延','慎重','谨慎','保守']],
+    [1, ['冒进','冒险','激进','赌','拼','大胆','放手一搏'], ['保守','求稳','稳妥','保险','安全','回避风险']],
+    [2, ['信任','开放','坦诚','轻信','依赖'], ['多疑','警惕','不信任','怀疑','戒备','封闭']],
+    [3, ['强硬','直接','对抗','正面','强势','激烈','刚'], ['温和','回避','妥协','让步','圆滑','绕弯']],
+    [4, ['坚定','绝不','不可逾越','死','硬','底线分明'], ['灵活','能妥协','弹性','可商量','变通']],
+    [5, ['极易突破','一碰就','脆弱','敏感','容易崩溃'], ['极强','难以突破','坚韧','顽强','耐压','能忍']],
+  ];
+  pairs.forEach(([idx, hiWords, loWords])=>{
+    let score = 5;
+    hiWords.forEach(w=>{ if(keyTxt.includes(w)) score += 2; });
+    loWords.forEach(w=>{ if(keyTxt.includes(w)) score -= 2; });
+    v[idx] = Math.max(1, Math.min(10, score));
+  });
+  return v;
+}
+function drawRadarChart(canvasId, values){
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const cx = w/2, cy = h/2, r = Math.min(cx, cy) - 18;
+  ctx.clearRect(0,0,w,h);
+
+  const n = 6;
+  // 背景网格
+  for(let ring=1; ring<=5; ring++){
+    const rr = r * ring / 5;
+    ctx.beginPath();
+    for(let i=0; i<=n; i++){
+      const angle = Math.PI/2 - i * 2*Math.PI/n;
+      const x = cx + rr * Math.cos(angle);
+      const y = cy - rr * Math.sin(angle);
+      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(255,255,255,.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  // 轴线
+  for(let i=0; i<n; i++){
+    const angle = Math.PI/2 - i * 2*Math.PI/n;
+    const x = cx + r * Math.cos(angle);
+    const y = cy - r * Math.sin(angle);
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(x,y);
+    ctx.strokeStyle = 'rgba(255,255,255,.06)';
+    ctx.stroke();
+  }
+  // 数据填充
+  ctx.beginPath();
+  for(let i=0; i<=n; i++){
+    const idx = i % n;
+    const angle = Math.PI/2 - idx * 2*Math.PI/n;
+    const val = Math.max(0.1, Math.min(1, (values[idx]||5)/10));
+    const x = cx + r * val * Math.cos(angle);
+    const y = cy - r * val * Math.sin(angle);
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0,212,255,.15)';
+  ctx.fill();
+  ctx.strokeStyle = 'var(--cyan)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // 数据点
+  for(let i=0; i<n; i++){
+    const angle = Math.PI/2 - i * 2*Math.PI/n;
+    const val = Math.max(0.1, Math.min(1, (values[i]||5)/10));
+    const x = cx + r * val * Math.cos(angle);
+    const y = cy - r * val * Math.sin(angle);
+    ctx.beginPath(); ctx.arc(x,y,3,0,2*Math.PI);
+    ctx.fillStyle = 'var(--cyan)';
+    ctx.fill();
+  }
+  // 标签
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  RADAR_LABELS.forEach((label,i)=>{
+    const angle = Math.PI/2 - i * 2*Math.PI/n;
+    const lx = cx + (r + 14) * Math.cos(angle);
+    const ly = cy - (r + 14) * Math.sin(angle);
+    ctx.fillStyle = 'var(--text-dim)';
+    ctx.fillText(label, lx, ly);
+  });
+  // 中心数值
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillStyle = 'var(--cyan)';
+  const avg = (values.reduce((a,b)=>a+b,0)/values.length).toFixed(1);
+  ctx.fillText(avg, cx, cy+1);
+}
+
+// ─── 添加/编辑角色模态框 ───
+function showAddCharModal(projectName, charName){
+  const p = DB.projects[projectName];
+  let defaults = {name:'', role:'主要角色', tag:'', behavior:'', details:'', cares:'', fears:''};
+  if(charName && p?.characters){
+    const cid = 'char_'+charName.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'_');
+    const ch = p.characters[cid];
+    if(ch){
+      defaults = {
+        name: ch.name||'',
+        role: ch.role||'主要角色',
+        tag: ch.reader_tag||ch.tag||'',
+        behavior: ch.behavioral_model||'',
+        details: [ch.decision_style,ch.risk_attitude,ch.trust_pattern,ch.conflict_style,ch.bottom_line,ch.breaking_point].filter(Boolean).join('、'),
+        cares: (ch.cares_about||[]).join('、'),
+        fears: (ch.fears||[]).join('、'),
+      };
+    }
+  }
+  const isEdit = !!charName;
+  showModal(`
+    <h3>${isEdit?'✏️ 编辑角色':'➕ 添加定制角色'}</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+      <input id="addCharName" value="${defaults.name}" placeholder="角色名 *" style="width:100%;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+      <select id="addCharRole" style="width:100%;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+        <option value="主角" ${defaults.role==='主角'?'selected':''}>⭐ 主角</option>
+        <option value="反派" ${defaults.role==='反派'?'selected':''}>💀 反派</option>
+        <option value="主要角色" ${defaults.role==='主要角色'?'selected':''}>👤 主要角色</option>
+        <option value="配角" ${defaults.role==='配角'?'selected':''}>👤 配角</option>
+      </select>
+      <input id="addCharTag" value="${defaults.tag}" placeholder="读者标签（如：退伍军人/保护者）" style="width:100%;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+      <textarea id="addCharBehavior" rows="4" placeholder="行为模式描述（先硬后软、在极端暴力下人格坍塌...）" style="width:100%;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);resize:vertical">${defaults.behavior}</textarea>
+      <textarea id="addCharDetails" rows="3" placeholder="决策风格、风险态度、信任倾向、冲突处理等，用逗号分隔" style="width:100%;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);resize:vertical">${defaults.details}</textarea>
+      <input id="addCharCares" value="${defaults.cares}" placeholder="在意的事（逗号分隔）" style="width:100%;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+      <input id="addCharFears" value="${defaults.fears}" placeholder="恐惧的事（逗号分隔）" style="width:100%;padding:6px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+    </div>
+  `, [
+    {text:'取消', cls:'btn-secondary', fn:closeModal},
+    {text: isEdit?'💾 保存修改':'💾 保存角色', cls:'btn-primary', fn:()=>{
+      const name = document.getElementById('addCharName')?.value.trim();
+      if(!name){toast('请输入角色名','error');return;}
+      const role = document.getElementById('addCharRole')?.value||'主要角色';
+      const tag = document.getElementById('addCharTag')?.value.trim()||'';
+      const behavior = document.getElementById('addCharBehavior')?.value.trim()||'';
+      const details = document.getElementById('addCharDetails')?.value.trim()||'';
+      const cares = document.getElementById('addCharCares')?.value.trim()||'';
+      const fears = document.getElementById('addCharFears')?.value.trim()||'';
+      saveCustomCharacter(projectName, {name, role, tag, behavior, details, cares, fears});
+      closeModal();
+    }},
+  ]);
+}
+function saveCustomCharacter(projectName, data){
+  const p = DB.projects[projectName]; if(!p) return;
+  if(!p.characters) p.characters = {};
+  const cid = 'char_'+data.name.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'_');
+  const details = data.details.split(/[,，、]/).map(s=>s.trim()).filter(Boolean);
+  p.characters[cid] = {
+    name: data.name, role: data.role,
+    reader_tag: data.tag, tag: data.tag,
+    behavioral_model: data.behavior,
+    decision_style: details[0]||'',
+    risk_attitude: details[1]||'',
+    trust_pattern: details[2]||'',
+    conflict_style: details[3]||'',
+    bottom_line: details[4]||'',
+    breaking_point: details[5]||'',
+    cares_about: data.cares.split(/[,，、]/).map(s=>s.trim()).filter(Boolean),
+    fears: data.fears.split(/[,，、]/).map(s=>s.trim()).filter(Boolean),
+    relationships: {},
+    traits: [],
+    consistency_issues: [],
+  };
+  saveDB();
+  // 保存到磁盘（独立文件）
+  saveFileToDisk(projectName, 'characters', `${data.name}.json`, p.characters[cid]);
+  // ★ 同时更新 characterProfiles/characters.json 批量备份
+  saveFileToDisk(projectName, 'characterProfiles', 'characters.json', p.characters);
+  toast(`✅ 角色「${data.name}」已保存`);
+  renderers.characters();
+}
+
+// ─── 删除文件 ───
+async function deleteFileFromDisk(project, subfolder, filename){
+  try {
+    await fetch('http://127.0.0.1:8899/api/project/delete', {
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({project, folder:subfolder, filename})
+    });
+  } catch(e){}
+}
+
+// ─── 删除自定义角色（模态确认） ───
+function deleteCustomChar(projectName, charName){
+  showModal(`
+    <h3>🗑️ 确认删除</h3>
+    <p style="font-size:14px;color:var(--text-dim);margin:12px 0">
+      确定要删除角色「<strong>${charName}</strong>」吗？
+    </p>
+    <div style="background:rgba(233,96,96,.1);border:1px solid var(--accent);border-radius:6px;padding:10px;font-size:12px;color:var(--accent)">
+      ⚠️ 此操作不可恢复！
+    </div>
+  `, [
+    {text:'❌ 取消', cls:'btn-secondary', fn:closeModal},
+    {text:'🗑️ 确认删除', cls:'btn-danger', fn:async function(){
+      closeModal();
+      const p = DB.projects[projectName];
+      if(p?.characters){
+        const cid = 'char_'+charName.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'_');
+        delete p.characters[cid];
+        saveDB();
+        // ★ 同步更新备份文件
+        saveFileToDisk(projectName, 'characterProfiles', 'characters.json', p.characters);
+      }
+      await deleteFileFromDisk(projectName, 'characters', `${charName}.json`);
+      toast(`🗑️ 角色「${charName}」已删除`);
+      renderers.characters();
+    }},
+  ]);
+}
+
+// ─── 自定义分析提示词模态框 ───
+function showCustomPromptModal(projectName){
+  const p = DB.projects[projectName];
+  // 优先从磁盘读取
+  let saved = p?._customCharPrompt || localStorage.getItem('customCharPrompt_'+projectName) || '';
+  // 异步从磁盘加载后更新显示
+  (async()=>{
+    const diskContent = await readFileFromDisk(projectName, 'config', 'custom_char_prompt.md');
+    if(diskContent && diskContent.trim()){
+      saved = diskContent;
+      const ta = document.getElementById('customCharPrompt');
+      if(ta) ta.value = diskContent;
+    }
+  })();
+  showModal(`
+    <h3>📝 自定义角色分析提示词</h3>
+    <p style="font-size:11px;color:var(--text-dim);margin:4px 0">点击「自定义AI分析」时将使用此提示词替代默认的角色分析提示词</p>
+    <textarea id="customCharPrompt" rows="10" placeholder="请编写自定义的角色分析提示词...
+例如：请分析故事中所有角色的深层心理动机、人格演变轨迹..." style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);resize:vertical;font-size:13px;line-height:1.6">${saved.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+  `, [
+    {text:'取消', cls:'btn-secondary', fn:closeModal},
+    {text:'💾 保存', cls:'btn-primary', fn:()=>{
+      const text = document.getElementById('customCharPrompt')?.value.trim()||'';
+      if(!p) return;
+      p._customCharPrompt = text;
+      localStorage.setItem('customCharPrompt_'+projectName, text);
+      saveFileToDisk(projectName, 'config', 'custom_char_prompt.md', text);
+      toast('✅ 自定义提示词已保存');
+      closeModal();
+    }},
+  ]);
+}
+
+// ─── 删除自定义提示词 ───
+function deleteCustomPrompt(projectName){
+  showModal(`
+    <h3>🗑️ 确认删除</h3>
+    <p style="font-size:14px;color:var(--text-dim);margin:12px 0">
+      确定要删除自定义分析提示词吗？
+    </p>
+    <div style="background:rgba(233,96,96,.1);border:1px solid var(--accent);border-radius:6px;padding:10px;font-size:12px;color:var(--accent)">
+      ⚠️ 此操作不可恢复！自定义AI分析时将使用默认提示词。
+    </div>
+  `, [
+    {text:'❌ 取消', cls:'btn-secondary', fn:closeModal},
+    {text:'🗑️ 确认删除', cls:'btn-danger', fn:async function(){
+      closeModal();
+      const p = DB.projects[projectName];
+      if(p) p._customCharPrompt = '';
+      localStorage.removeItem('customCharPrompt_'+projectName);
+      await deleteFileFromDisk(projectName, 'config', 'custom_char_prompt.md');
+      toast('🗑️ 自定义提示词已删除');
+      renderers.characters();
+    }},
+  ]);
+}
+
+// ─── 显示自定义分析结果（从中央文件按角色名匹配） ───
+async function showCharCustomAnalysis(projectName, charName){
+  const p = DB.projects[projectName];
+  if(!p) return;
+  // 从 characters/custom_analysis.md 读取完整分析文本
+  const fullText = await readFileFromDisk(projectName, 'characters', 'custom_analysis.md');
+  if(!fullText || !fullText.trim()){
+    toast('暂无自定义分析结果，请先运行「自定义AI角色分析」','info');
+    return;
+  }
+  // 按角色名匹配段落
+  const lines = fullText.split('\n');
+  let charSection = [], inChar = false;
+  for(const line of lines){
+    const isHeader = line.includes('【'+charName+'】') || new RegExp('^#+\\s*[：:]?\\s*'+charName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(line);
+    if(isHeader){ inChar = true; charSection.push(line); continue; }
+    if(inChar && !line.includes(charName) && (line.startsWith('【') || /^#\s/.test(line))){ inChar = false; break; }
+    if(inChar) charSection.push(line);
+  }
+  // 如果段落提取失败，尝试全文搜索角色名附近
+  let displayText = '';
+  if(charSection.length > 3){
+    displayText = charSection.join('\n').trim();
+  } else {
+    // 回退：搜索角色名所在段落
+    const idx = fullText.indexOf(charName);
+    if(idx >= 0){
+      const start = Math.max(0, fullText.lastIndexOf('\n', idx - 500));
+      const end = Math.min(fullText.length, fullText.indexOf('\n', idx + 500));
+      displayText = (start > 0 ? '...\n' : '') + fullText.substring(start, end) + (end < fullText.length ? '\n...' : '');
+    }
+  }
+  if(!displayText){
+    toast('未在分析结果中找到「'+charName+'」相关信息','info');
+    return;
+  }
+  showModal(`
+    <h3>📝 ${charName} — 自定义分析结果</h3>
+    <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;max-height:65vh;overflow-y:auto;margin-top:8px;padding:12px;background:rgba(0,0,0,.15);border-radius:6px;color:var(--text-dim)">${displayText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+  `, [
+    {text:'关闭', cls:'btn-secondary', fn:closeModal},
+  ]);
+}
 
 // ═══════ 角色池页面 ═══════
 renderers.characters = function(){
@@ -2479,58 +2967,180 @@ renderers.characters = function(){
   merged.sort((a,b)=>(order[a.roleIcon+' '+a.role]??9)-(order[b.roleIcon+' '+b.role]??9));
 
   let html = `<div class="page-title">🧠 角色池 <span style="font-size:13px;font-weight:400;color:var(--text-dim)">${merged.length} 个角色</span></div>`;
-  html += `<div style="margin-bottom:12px"><button class="btn btn-primary" onclick="analyzeProject('${locked.name}')">🔄 AI重新分析</button></div>`;
+  html += `<div style="margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="analyzeProject('${locked.name}')">🔄 AI重新分析</button>
+    <button class="btn btn-secondary" onclick="analyzeProjectCustom('${locked.name}')">📝 自定义AI角色分析</button>
+  </div>`;
 
   merged.forEach(ch=>{
     const roleColor = ch.role.includes('主角')?'var(--cyan)':ch.role.includes('反派')?'var(--accent)':'var(--text-dim)';
+    const cid = 'ch_'+ch.name.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'_');
 
     html += `<div class="card" style="margin-bottom:8px;border-left:3px solid ${roleColor}">
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none"
+           onclick="const b=document.getElementById('${cid}_body');if(b){b.style.display=b.style.display==='none'?'':'none';this.querySelector('.ch_toggle').textContent=b.style.display==='none'?'▶':'▼'}">
+        <span class="ch_toggle" style="font-size:10px;color:var(--text-dim);width:12px;text-align:center">▼</span>
         <span style="font-size:20px">${ch.roleIcon}</span>
         <div><div style="font-weight:600">${ch.name}</div>
         <div style="font-size:12px;color:${roleColor}">${ch.roleIcon} ${ch.role}</div></div>
         ${ch.tag?`<span style="margin-left:auto;font-size:12px;color:var(--cyan);background:rgba(0,212,255,.1);padding:2px 8px;border-radius:8px">${ch.tag}</span>`:''}
       </div>
+      <div id="${cid}_body">
       ${ch.behavioral_model?`<div style="margin-top:6px;padding:6px 8px;background:rgba(0,212,255,.04);border-left:2px solid var(--cyan);border-radius:4px;font-size:12px;line-height:1.6;color:var(--text-dim)">${ch.behavioral_model}</div>`:''}
+      <div style="margin-top:6px;display:flex;align-items:center;gap:8px">
+        <canvas id="radar_${ch.name.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'_')}" width="120" height="120" style="flex-shrink:0"></canvas>
+        <div style="flex:1;font-size:11px;line-height:1.6;color:var(--text-dim)">
+          ${ch.decision_style?`<div><span style="color:var(--orange)">⚡决策:</span> ${ch.decision_style}</div>`:''}
+          ${ch.risk_attitude?`<div><span style="color:var(--orange)">🎲冒险:</span> ${ch.risk_attitude}</div>`:''}
+          ${ch.trust_pattern?`<div><span style="color:var(--cyan)">🔑信任:</span> ${ch.trust_pattern}</div>`:''}
+          ${ch.conflict_style?`<div><span style="color:var(--orange)">⚔️冲突:</span> ${ch.conflict_style}</div>`:''}
+          ${ch.bottom_line?`<div><span style="color:var(--accent)">🛡️原则:</span> ${ch.bottom_line}</div>`:''}
+          ${ch.breaking_point?`<div><span style="color:var(--accent)">💥忍耐:</span> ${ch.breaking_point}</div>`:''}
+        </div>
+      </div>
       <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">${ch.traits.map(t=>`<span style="background:rgba(255,255,255,.06);padding:2px 8px;border-radius:6px;font-size:12px">${t}</span>`).join('')}</div>
       <div style="margin-top:6px;font-size:12px;line-height:1.6">
         ${ch.cares_about.length?`<div><span style="color:var(--green)">❤️ 在意:</span> ${ch.cares_about.join('、')}</div>`:''}
         ${ch.fears.length?`<div><span style="color:var(--accent)">😨 害怕:</span> ${ch.fears.join('、')}</div>`:''}
         ${Object.keys(ch.relationships).length?`<div><span style="color:var(--cyan)">🤝 关系:</span> ${Object.entries(ch.relationships).map(([k,v])=>`${k}(${v})`).join('、')}</div>`:''}
-      </div>`;
-
-    const hasExtra = ch.decision_style||ch.risk_attitude||ch.bottom_line||ch.trust_pattern||ch.conflict_style||ch.breaking_point;
-    if(hasExtra){
-      html += `<details style="margin-top:4px"><summary style="cursor:pointer;font-size:12px;color:var(--text-dim)">📋 更多行为特征</summary>
-        <div style="margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.03);border-radius:4px;line-height:1.7">
-          ${ch.decision_style?`<div><span style="color:var(--orange)">⚡ 决策风格:</span> ${ch.decision_style}</div>`:''}
-          ${ch.risk_attitude?`<div><span style="color:var(--orange)">🎲 风险态度:</span> ${ch.risk_attitude}</div>`:''}
-          ${ch.bottom_line?`<div><span style="color:var(--accent)">🛡️ 底线:</span> ${ch.bottom_line}</div>`:''}
-          ${ch.trust_pattern?`<div><span style="color:var(--cyan)">🔑 信任模式:</span> ${ch.trust_pattern}</div>`:''}
-          ${ch.conflict_style?`<div><span style="color:var(--orange)">⚔️ 冲突处理:</span> ${ch.conflict_style}</div>`:''}
-          ${ch.breaking_point?`<div><span style="color:var(--accent)">💥 突破底线的条件:</span> ${ch.breaking_point}</div>`:''}
-        </div></details>`;
-    }
-    if(ch.consistency_issues.length){
-      html += `<div style="margin-top:4px;padding:4px 8px;background:rgba(233,96,96,.1);border-radius:4px;color:var(--accent);font-size:12px">⚠️ 一致性提醒: ${ch.consistency_issues.join('; ')}</div>`;
-    }
-    html += `</div>`;
+      </div>
+      ${ch.consistency_issues.length?`<div style="margin-top:4px;padding:4px 8px;background:rgba(233,96,96,.1);border-radius:4px;color:var(--accent);font-size:12px">⚠️ 一致性提醒: ${ch.consistency_issues.join('; ')}</div>`:''}
+      <div style="margin-top:4px"><button class="btn btn-sm btn-secondary" style="font-size:9px;padding:2px 8px" onclick="showCharCustomAnalysis('${locked.name}','${ch.name}')">📝 自定义分析结果</button></div>
+      </div>
+    </div>`;
   });
 
   main.innerHTML = html;
-  side.innerHTML = `<div class="card"><div class="card-title">📖 ${locked.name}</div>
+  // ★ 绘制六芒星雷达图
+  setTimeout(()=>{
+    merged.forEach(ch=>{
+      const cid = 'radar_'+ch.name.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g,'_');
+      const vals = estimateRadarValues(ch);
+      drawRadarChart(cid, vals);
+    });
+  }, 50);
+  // ★ 右侧面板：项目信息 + 添加角色 + 自定义分析提示词
+  let sideHtml = `<div class="card"><div class="card-title">📖 ${locked.name}</div>
     <div style="font-size:12px;color:var(--text-dim);line-height:1.8">
       <div>⭐ 主角: ${merged.filter(c=>c.role.includes('主角')).length}</div>
       <div>💀 反派: ${merged.filter(c=>c.role.includes('反派')).length}</div>
       <div>👤 其他: ${merged.filter(c=>!c.role.includes('主角')&&!c.role.includes('反派')).length}</div>
       <div>👥 共 ${merged.length} 个角色</div>
     </div>
+  </div>
+
+  <div class="card">
+    <button class="btn btn-sm btn-secondary btn-block" style="margin-bottom:4px" onclick="showAddCharModal('${locked.name}', null)">➕ 添加角色</button>
+    <div id="savedCharList" style="font-size:11px;max-height:180px;overflow-y:auto">加载中...</div>
+  </div>
+
+  <div class="card">
+    <button class="btn btn-sm btn-secondary btn-block" style="margin-bottom:4px" onclick="showCustomPromptModal('${locked.name}')">📝 自定义分析提示词</button>
+    <div id="savedPromptStatus" style="font-size:11px;color:var(--text-dim);padding:2px 0">加载中...</div>
   </div>`;
+
+  side.innerHTML = sideHtml;
+
+  // ★ 异步加载已保存的自定义角色列表
+  (async ()=>{
+    const charListEl = document.getElementById('savedCharList');
+    try {
+      const files = await listDiskFiles(locked.name, 'characters');
+      if(files && files.length){
+        const customChars = files.filter(f=>f.endsWith('.json'));
+        if(customChars.length){
+          charListEl.innerHTML = customChars.map(f=>{
+            const name = f.replace(/\.json$/,'');
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+              <span style="cursor:pointer;color:var(--cyan)" onclick="showAddCharModal('${locked.name}','${name}')">✏️ ${name}</span>
+              <span style="cursor:pointer;color:var(--accent);font-size:10px" onclick="deleteCustomChar('${locked.name}','${name}')">✕</span>
+            </div>`;
+          }).join('');
+        } else {
+          charListEl.innerHTML = '<span style="color:var(--text-dim)">暂无自定义角色</span>';
+        }
+      } else {
+        charListEl.innerHTML = '<span style="color:var(--text-dim)">暂无自定义角色</span>';
+      }
+    } catch(e){
+      charListEl.innerHTML = '<span style="color:var(--text-dim)">暂无自定义角色</span>';
+    }
+  })();
+
+  // ★ 异步加载自定义提示词状态（同角色一样：可编辑、可删除）
+  (async ()=>{
+    const promptEl = document.getElementById('savedPromptStatus');
+    try {
+      const content = await readFileFromDisk(locked.name, 'config', 'custom_char_prompt.md');
+      if(content && content.trim()){
+        const preview = content.trim().substring(0,50).replace(/\n/g,' ');
+        promptEl.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0">
+          <span style="cursor:pointer;color:var(--cyan);font-size:11px" onclick="showCustomPromptModal('${locked.name}')">✏️ 自定义提示词</span>
+          <span style="cursor:pointer;color:var(--accent);font-size:10px" onclick="deleteCustomPrompt('${locked.name}')">✕</span>
+        </div>
+        <div style="font-size:10px;color:var(--text-dim);margin-top:2px">📝 ${content.trim().length}字 · ${preview}${content.trim().length>50?'...':''}</div>`;
+      } else {
+        promptEl.innerHTML = '<span style="color:var(--text-dim);font-size:11px">暂无自定义提示词</span>';
+      }
+    } catch(e){
+      promptEl.innerHTML = '<span style="color:var(--text-dim);font-size:11px">暂无自定义提示词</span>';
+    }
+  })();
 };
 
 // ═══════ 审查室页面 ═══════
 // 完整工作流：编辑器(左) + 建议卡片(右) + 保存到磁盘 + 版本历史
 let _reviewInProgress = false;
+// ★ 编辑器撤销/重做历史
+let _editorUndoStack = [];
+let _editorRedoStack = [];
+const MAX_UNDO = 50;
+
+// ★ 保存编辑器快照以便撤销
+function pushEditorSnapshot(){
+  const el = document.getElementById('reviewEditor');
+  if(!el) return;
+  const val = el.value;
+  // 如果与栈顶相同则不重复记录
+  if(_editorUndoStack.length && _editorUndoStack[_editorUndoStack.length-1] === val) return;
+  _editorUndoStack.push(val);
+  if(_editorUndoStack.length > MAX_UNDO) _editorUndoStack.shift();
+  _editorRedoStack = []; // 新操作清空重做栈
+}
+
+// ★ 撤销
+function undoEditor(){
+  if(_editorUndoStack.length < 2) return; // 至少保留一个历史
+  const el = document.getElementById('reviewEditor');
+  if(!el) return;
+  // 当前值压入重做栈
+  _editorRedoStack.push(el.value);
+  // 弹出当前值
+  _editorUndoStack.pop();
+  const prev = _editorUndoStack[_editorUndoStack.length-1];
+  el.value = prev;
+  updateUndoButtons();
+}
+
+// ★ 重做
+function redoEditor(){
+  if(!_editorRedoStack.length) return;
+  const el = document.getElementById('reviewEditor');
+  if(!el) return;
+  const next = _editorRedoStack.pop();
+  _editorUndoStack.push(next);
+  el.value = next;
+  updateUndoButtons();
+}
+
+// ★ 更新撤销/重做按钮状态
+function updateUndoButtons(){
+  const ub = document.getElementById('btnUndo');
+  const rb = document.getElementById('btnRedo');
+  if(ub) ub.style.opacity = _editorUndoStack.length > 1 ? '1' : '0.3';
+  if(rb) rb.style.opacity = _editorRedoStack.length ? '1' : '0.3';
+}
+
 renderers.review = function(){
   const main = document.getElementById('page-review');
   const side = document.getElementById('page-review-side');
@@ -2567,6 +3177,7 @@ renderers.review = function(){
     <button class="btn btn-primary btn-sm" id="btnStartReview" ${_reviewInProgress?'disabled':''}>${_reviewInProgress?'⏳ 审查中...':'🔍 审查'}</button>
     <button class="btn btn-success btn-sm" onclick="saveReviewDraft(${savedChNum})">💾 保存草稿</button>
     <button class="btn btn-success btn-sm" onclick="approveChapter(${savedChNum})" ${!currentCh||currentCh.status==='approved'?'disabled':''}>✅ 定稿</button>
+    ${lr&&lr.chapter===savedChNum&&lr.allSuggestions?.length?`<span style="font-size:10px;color:var(--cyan);background:rgba(0,212,255,.08);padding:2px 8px;border-radius:10px">💡 ${lr.allSuggestions.length}条建议</span>`:''}
   </div>
   <div id="reviewHistoryStatus" style="font-size:10px;color:var(--text-dim);margin-bottom:4px"></div>`;
 
@@ -2580,15 +3191,18 @@ renderers.review = function(){
   });
   html += `</div>`;
 
-  // ─── 左右双栏：编辑器(左) + 建议(右) ───
-  html += `<div class="row" style="gap:8px;height:calc(100vh - 340px);min-height:350px">
-    <div class="col" style="display:flex;flex-direction:column;min-width:0">`;
+  // ─── 单栏：编辑器全宽（建议移到右侧可拖拽面板中） ───
+  html += `<div style="height:calc(100vh - 340px);min-height:350px;display:flex;flex-direction:column">`;
 
-  // 左栏：章节编辑器
+  // 章节编辑器
   const chContent = currentCh?currentCh.content||'':'（空）';
   html += `<div class="card" style="flex:1;display:flex;flex-direction:column;margin-bottom:0;padding:10px">
-      <div class="card-title" style="margin-bottom:4px;font-size:13px">📝 第${savedChNum}章 编辑器</div>
-      <textarea id="reviewEditor" style="flex:1;width:100%;resize:none;font-size:13px;line-height:1.7;font-family:inherit;min-height:200px">${chContent.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+      <div class="card-title" style="margin-bottom:4px;font-size:13px;display:flex;align-items:center;gap:6px">
+        <span style="flex:1">📝 第${savedChNum}章 编辑器</span>
+        <button id="btnUndo" class="btn btn-sm btn-secondary" style="font-size:9px;padding:1px 8px;opacity:0.3" onclick="undoEditor()" title="撤销 Ctrl+Z">↩ 撤销</button>
+        <button id="btnRedo" class="btn btn-sm btn-secondary" style="font-size:9px;padding:1px 8px;opacity:0.3" onclick="redoEditor()" title="重做 Ctrl+Y">↪ 前进</button>
+      </div>
+      <textarea id="reviewEditor" style="flex:1;width:100%;resize:none;font-size:13px;line-height:1.7;font-family:inherit;min-height:200px;background:var(--bg2);color:var(--text-dim)">${chContent.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
     </div>`;
 
   // 左栏底部：三审评分 + 门禁
@@ -2613,35 +3227,7 @@ renderers.review = function(){
     }
   }
 
-  html += `</div><div class="col" style="min-width:200px;max-width:360px;display:flex;flex-direction:column">`;
-
-  // 右栏：修改建议
-  html += `<div class="card" style="flex:1;display:flex;flex-direction:column;margin-bottom:0;padding:10px;overflow-y:auto">
-      <div class="card-title" style="margin-bottom:4px;font-size:13px">💡 修改建议${lr&&lr.chapter===savedChNum&&lr.allSuggestions?` (${lr.allSuggestions.length}条)`:' (暂无)'}</div>`;
-
-  if(lr && lr.chapter===savedChNum && lr.allSuggestions?.length){
-    lr.allSuggestions.forEach((s,i)=>{
-      const rColor=s.reviewer==='strict'?'var(--accent)':s.reviewer==='moderate'?'var(--orange)':'var(--green)';
-      const rLabel=s.reviewer==='strict'?'🔴':s.reviewer==='moderate'?'🟡':'🟢';
-      const alreadyApplied = lr.appliedSuggestions?.some(a=>a.index===i);
-      html += `<details style="margin:2px 0;padding:3px 6px;border-radius:3px;background:${alreadyApplied?'rgba(46,213,115,.08)':'rgba(255,255,255,.02)'};border-left:2px solid ${rColor}">
-        <summary style="cursor:pointer;font-size:11px">
-          ${alreadyApplied?'✅':rLabel} ${s.dimension||'建议'}
-          <span style="color:var(--text-dim);font-size:10px">${(s.proposed_change||'').substring(0,30)}${(s.proposed_change||'').length>30?'...':''}</span>
-        </summary>
-        <div style="margin-top:3px;font-size:11px;line-height:1.5">
-          ${s.current_text?`<div style="background:rgba(233,96,96,.08);padding:3px 5px;border-radius:2px;margin:2px 0;font-size:10px;cursor:pointer" onclick="scrollEditorToText('${s.current_text.replace(/'/g,"\\'").substring(0,120)}')" title="点击跳转到原文位置"><span style="color:var(--accent)">📍 原文:</span> ${s.current_text}</div>`:''}
-          ${s.proposed_change?`<div style="background:rgba(46,213,115,.08);padding:3px 5px;border-radius:2px;margin:2px 0;font-size:10px"><span style="color:var(--green)">修改:</span> ${s.proposed_change}</div>`:''}
-          ${s.reasoning?`<div style="font-size:10px;color:var(--text-dim);margin:2px 0">💡 ${s.reasoning}</div>`:''}
-          ${alreadyApplied?'<span style="color:var(--green);font-size:10px">✅ 已应用</span>'
-            :`<button class="btn btn-sm btn-primary" style="font-size:10px;padding:2px 6px;margin-top:2px" onclick="applyReviewSuggestion(${savedChNum},${i})">📌 应用</button>`}
-        </div>
-      </details>`;
-    });
-  } else {
-    html += `<div style="font-size:11px;color:var(--text-dim);padding:10px;text-align:center">点击「审查」获取三审建议</div>`;
-  }
-  html += `</div></div></div>`; // row end
+  html += `</div>`;
 
   // ─── 版本历史（可折叠） ───
   const rHist = p._reviewHistory||{};
@@ -2701,11 +3287,147 @@ renderers.review = function(){
     if(!n||_reviewInProgress)return; await startReview(locked.name,n);
   });
 
+  // ★ 编辑器撤销/重做初始化
+  const editorEl = document.getElementById('reviewEditor');
+  if(editorEl){
+    // 初始化历史栈
+    _editorUndoStack = [editorEl.value];
+    _editorRedoStack = [];
+    updateUndoButtons();
+    // 输入变化时记录快照
+    editorEl.addEventListener('input', pushEditorSnapshot);
+    // 键盘快捷键
+    editorEl.addEventListener('keydown', function(e){
+      if(e.ctrlKey || e.metaKey){
+        if(e.key === 'z' && !e.shiftKey){ e.preventDefault(); undoEditor(); }
+        else if(e.key === 'y' || (e.key === 'z' && e.shiftKey)){ e.preventDefault(); redoEditor(); }
+      }
+    });
+  }
+
   // ★ 异步加载历史审查文件列表到下拉框
   loadReviewFileList(locked.name, savedChNum);
 
-  // 右侧面板
-  let sideHtml = `<div class="card"><div class="card-title">📖 ${locked.name}</div>
+  // 右侧面板：修改建议（可拖拽）+ 项目信息
+  let sideHtml = ``;
+
+  // ─── 全部修改建议（可折叠） ───
+  sideHtml += `<div class="card" style="padding:8px;overflow-y:auto;max-height:40vh">
+    <div class="card-title" style="margin-bottom:4px;font-size:12px;cursor:pointer;user-select:none"
+         onclick="const b=this.nextElementSibling;if(b){b.style.display=b.style.display==='none'?'':'none';this.querySelector('.toggle-icon').textContent=b.style.display==='none'?'▶':'▼'}">
+      📋 全部修改建议${lr&&lr.chapter===savedChNum&&lr.allSuggestions?` (${lr.allSuggestions.length}条)`:' (暂无)'}
+      <span class="toggle-icon" style="font-size:9px;color:var(--text-dim);float:right">▼</span>
+    </div>
+    <div class="suggestions-body">`;
+
+  if(lr && lr.chapter===savedChNum && lr.allSuggestions?.length){
+    // 按审查官分组显示
+    const grouped = {strict:[], moderate:[], lenient:[]};
+    lr.allSuggestions.forEach((s,i)=>{ if(grouped[s.reviewer]) grouped[s.reviewer].push({...s, idx:i}); });
+    ['strict','moderate','lenient'].forEach(rk=>{
+      const items = grouped[rk]||[];
+      if(!items.length) return;
+      const rColor=rk==='strict'?'var(--accent)':rk==='moderate'?'var(--orange)':'var(--green)';
+      const rLabel=rk==='strict'?'🔴严审':rk==='moderate'?'🟡衡审':'🟢宽审';
+      const rScore=lr.reviewers?.[rk]?.score||'?';
+      sideHtml += `<div style="margin:4px 0 2px 0;font-size:10px;font-weight:600;color:${rColor}">${rLabel} (${rScore}分) — ${items.length}条</div>`;
+      items.forEach((s,i)=>{
+        const alreadyApplied = lr.appliedSuggestions?.some(a=>a.index===s.idx);
+        sideHtml += `<details style="margin:2px 0;padding:2px 5px;border-radius:3px;background:${alreadyApplied?'rgba(46,213,115,.08)':'rgba(255,255,255,.02)'};border-left:2px solid ${rColor}">
+          <summary style="cursor:pointer;font-size:10px">
+            ${alreadyApplied?'✅':''} ${s.dimension||'建议'}
+            <span style="color:var(--text-dim);font-size:9px">${(s.proposed_change||'').substring(0,20)}${(s.proposed_change||'').length>20?'...':''}</span>
+          </summary>
+          <div style="margin-top:2px;font-size:10px;line-height:1.4">
+            ${s.current_text?`<div style="background:rgba(233,96,96,.08);padding:2px 4px;border-radius:2px;margin:2px 0;font-size:9px;cursor:pointer" onclick="scrollEditorToText('${s.current_text.replace(/'/g,"\\'").substring(0,120)}')" title="点击跳转到原文位置"><span style="color:var(--accent)">📍 原文:</span> ${s.current_text}</div>`:''}
+            ${s.proposed_change?`<div style="background:rgba(46,213,115,.08);padding:2px 4px;border-radius:2px;margin:2px 0;font-size:9px"><span style="color:var(--green)">修改:</span> ${s.proposed_change}</div>`:''}
+            ${s.reasoning?`<div style="font-size:9px;color:var(--text-dim);margin:2px 0">💡 ${s.reasoning}</div>`:''}
+            ${alreadyApplied?'<span style="color:var(--green);font-size:9px">✅ 已应用</span>'
+              :`<button class="btn btn-sm btn-primary" style="font-size:9px;padding:1px 5px;margin-top:1px" onclick="applyReviewSuggestion(${savedChNum},${s.idx})">📌 应用</button>`}
+          </div>
+        </details>`;
+      });
+    });
+  } else {
+    sideHtml += `<div style="font-size:10px;color:var(--text-dim);padding:8px;text-align:center">点击「审查」获取三审建议</div>`;
+  }
+  sideHtml += `</div></div>`; // .suggestions-body + .card
+
+  // ─── 汇总修改建议（可折叠） ───
+  const sq = lr?.squeezeResult;
+  sideHtml += `<div class="card" style="padding:8px;overflow-y:auto;max-height:40vh">
+    <div class="card-title" style="margin-bottom:4px;font-size:12px;cursor:pointer;user-select:none"
+         onclick="const b=this.nextElementSibling;if(b){b.style.display=b.style.display==='none'?'':'none';this.querySelector('.toggle-icon2').textContent=b.style.display==='none'?'▶':'▼'}">
+      📊 汇总修改建议${lr&&lr.chapter===savedChNum&&lr.allSuggestions?` (${lr.allSuggestions.length}条)`:' (暂无)'}
+      <span class="toggle-icon2" style="font-size:9px;color:var(--text-dim);float:right">▼</span>
+    </div>
+    <div class="vote-body">`;
+
+  // ── 精选修改建议（夹逼优选） ──
+  if(sq?.winner){
+    const w = sq.winner;
+    sideHtml += `<div style="font-size:10px;line-height:1.5;margin-bottom:6px;padding:6px;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.2);border-radius:6px">
+      <div style="font-weight:600;font-size:11px;color:var(--yellow);margin-bottom:3px">🏆 精选修改建议</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:3px">
+        <span style="font-size:9px;padding:1px 5px;background:rgba(0,212,255,.1);border-radius:3px">质量 ${(w.quality*100).toFixed(0)}%</span>
+        <span style="font-size:9px;padding:1px 5px;background:rgba(255,159,67,.1);border-radius:3px">置信 ${(sq.confidence*100).toFixed(0)}%</span>
+        <span style="font-size:9px;padding:1px 5px;background:rgba(46,213,115,.1);border-radius:3px">严${(w.strict*100).toFixed(0)}</span>
+        <span style="font-size:9px;padding:1px 5px;background:rgba(255,211,42,.1);border-radius:3px">衡${(w.moderate*100).toFixed(0)}</span>
+        <span style="font-size:9px;padding:1px 5px;background:rgba(162,155,254,.1);border-radius:3px">宽${(w.lenient*100).toFixed(0)}</span>
+      </div>`;
+    if(sq.proof) sideHtml += `<div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;padding:3px;background:rgba(255,255,255,.03);border-radius:3px">📐 ${sq.proof.substring(0,200)}</div>`;
+    if(sq.voteResult){
+      const votedFor = sq.voteResult.vote_for==='B'?'建议B':'建议A';
+      sideHtml += `<div style="font-size:9px;padding:3px;background:rgba(0,212,255,.06);border-radius:3px;margin-bottom:2px">
+        🗳️ LLM投票选择「${votedFor}」 (信心${(sq.voteResult.confidence*100).toFixed(0)}%)
+        ${sq.voteResult.reasoning?`<br><span style="color:var(--text-dim)">💡 ${sq.voteResult.reasoning}</span>`:''}
+      </div>`;
+    }
+    if(w.suggestion){
+      sideHtml += `<div style="font-size:9px;padding:3px;background:rgba(46,213,115,.06);border-radius:3px;margin-top:2px">
+        <span style="color:var(--green)">修改:</span> ${w.suggestion.substring(0,300)}
+      </div>`;
+    }
+    if(sq.runnerUp){
+      sideHtml += `<details style="margin-top:2px"><summary style="cursor:pointer;font-size:9px;color:var(--text-dim)">📎 备选方案 (质量${(sq.runnerUp.quality*100).toFixed(0)}%)</summary>
+        <div style="font-size:9px;padding:3px;background:rgba(255,255,255,.03);border-radius:3px;margin-top:2px">${(sq.runnerUp.suggestion||'').substring(0,200)}</div>
+      </details>`;
+    }
+    sideHtml += `</div>`;
+  }
+
+  // ── 全部建议的夹逼评分列表 ──
+  if(lr && lr.chapter===savedChNum && lr.allSuggestions?.length){
+    sideHtml += `<div style="font-size:9px;color:var(--text-dim);margin:4px 0 2px 0">按质量分排列：</div>`;
+    // 按 _squeeze.quality 排序
+    const sorted = lr.allSuggestions.map((s,i)=>({s, idx:i, quality: s._squeeze?.quality||0})).sort((a,b)=>b.quality - a.quality);
+    sorted.forEach(({s, idx, quality})=>{
+      const qPct = (quality*100).toFixed(0);
+      const rColor=s.reviewer==='strict'?'var(--accent)':s.reviewer==='moderate'?'var(--orange)':'var(--green)';
+      const rLabel=s.reviewer==='strict'?'🔴':s.reviewer==='moderate'?'🟡':'🟢';
+      const alreadyApplied = lr.appliedSuggestions?.some(a=>a.index===idx);
+      sideHtml += `<details style="margin:2px 0;padding:2px 5px;border-radius:3px;background:${alreadyApplied?'rgba(46,213,115,.08)':'rgba(255,255,255,.02)'};border-left:2px solid ${rColor}">
+        <summary style="cursor:pointer;font-size:10px">
+          ${alreadyApplied?'✅':rLabel} ${s.dimension||'建议'} <span style="font-size:8px;color:${qPct>70?'var(--green)':qPct>40?'var(--orange)':'var(--text-dim)'}">质量${qPct}%</span>
+          <span style="color:var(--text-dim);font-size:9px">${(s.proposed_change||'').substring(0,18)}${(s.proposed_change||'').length>18?'...':''}</span>
+        </summary>
+        <div style="margin-top:2px;font-size:10px;line-height:1.4">
+          ${s.current_text?`<div style="background:rgba(233,96,96,.08);padding:2px 4px;border-radius:2px;margin:2px 0;font-size:9px;cursor:pointer" onclick="scrollEditorToText('${s.current_text.replace(/'/g,"\\'").substring(0,120)}')" title="点击跳转到原文位置"><span style="color:var(--accent)">📍 原文:</span> ${s.current_text}</div>`:''}
+          ${s.proposed_change?`<div style="background:rgba(46,213,115,.08);padding:2px 4px;border-radius:2px;margin:2px 0;font-size:9px"><span style="color:var(--green)">修改:</span> ${s.proposed_change}</div>`:''}
+          ${s.reasoning?`<div style="font-size:9px;color:var(--text-dim);margin:2px 0">💡 ${s.reasoning}</div>`:''}
+          ${s._squeeze?`<div style="font-size:8px;color:var(--text-dim)">夹逼: 严${(s._squeeze.strict*100).toFixed(0)} 衡${(s._squeeze.moderate*100).toFixed(0)} 宽${(s._squeeze.lenient*100).toFixed(0)} 收敛${(s._squeeze.convergence*100).toFixed(0)}% 对齐${(s._squeeze.alignment*100).toFixed(0)}%</div>`:''}
+          ${alreadyApplied?'<span style="color:var(--green);font-size:9px">✅ 已应用</span>'
+            :`<button class="btn btn-sm btn-primary" style="font-size:9px;padding:1px 5px;margin-top:1px" onclick="applyReviewSuggestion(${savedChNum},${idx})">📌 应用</button>`}
+        </div>
+      </details>`;
+    });
+  } else {
+    sideHtml += `<div style="font-size:10px;color:var(--text-dim);padding:6px;text-align:center">审查完成后显示夹逼评分</div>`;
+  }
+  sideHtml += `</div></div>`; // .vote-body + .card
+
+  // ─── 项目信息 ───
+  sideHtml += `<div class="card"><div class="card-title" style="font-size:11px">📖 ${locked.name}</div>
     <div style="font-size:11px;line-height:1.6">
       <div style="color:var(--text-dim)">📄 ${chapters.length}章 · 已审查 ${p.qualityHistory?.length||0}次</div>
       <div style="color:var(--text-dim)">⚙️ ≥${qg.passThreshold}通过 · ≥${qg.reviseThreshold}修订</div>
@@ -2978,6 +3700,9 @@ function applyReviewSuggestion(chNum, sugIndex){
   const original = sug.current_text || '';
   let content = editor.value || '';
 
+  // ★ 修改前保存快照（支持撤销）
+  pushEditorSnapshot();
+
   // ★ 先滚动到原文位置
   if(original) scrollEditorToText(original);
 
@@ -3137,6 +3862,8 @@ function runContinuityEngine(text, p){
   const chCount = allChapters.length;
   const lastChNum = chCount > 0 ? allChapters[allChapters.length-1].number : 0;
   const charNames = new Set();
+  // ★ story_state 数据（供死角色检查等）
+  const ss = p?.storyState;
 
   // 收集所有角色名
   Object.values(p.characters||{}).forEach(c=>{
@@ -3167,7 +3894,7 @@ function runContinuityEngine(text, p){
     }
   });
 
-  // ─── 2. 检查主要角色缺席 ───
+  // ─── 2. 检查主要角色缺席（排除已死亡角色） ───
   const rolePriority = ['主角','反派','主要角色'];
   const absentChars = [];
   charNames.forEach(name=>{
@@ -3175,6 +3902,9 @@ function runContinuityEngine(text, p){
     let role = '';
     Object.values(p.characters||{}).forEach(c=>{if(c.name===name) role=c.role||'';});
     Object.entries(p.readerData?.characters||{}).forEach(([n,info])=>{if(n===name) role=info.role||'';});
+    // ★ 忽略已死亡角色
+    const ssChar = ss?.characters?.[name];
+    if(ssChar?.status === 'dead') return;
 
     if(rolePriority.includes(role)){
       // 检查最近5章是否有该角色
@@ -3231,7 +3961,19 @@ function runContinuityEngine(text, p){
     });
   }
 
-  // ─── 5. 检查时间线推进 ───
+  // ─── 5. ★ 死角色活跃检查（story_state 数据） ───
+  if(ss?.characters){
+    Object.values(ss.characters).forEach(c=>{
+      if(c.status === 'dead' && text.includes(c.name)){
+        checks.push({
+          rule:'死角色活跃', flagged:true, severity:'CRITICAL',
+          detail:`「${c.name}」已被标记为死亡，但在当前章节中仍出现，请检查是否为回忆/闪回/幻觉，若不是则需修正`
+        });
+      }
+    });
+  }
+
+  // ─── 6. 检查时间线推进 ───
   const totalChars = text.length;
   if(lastChNum > 0 && totalChars){
     const avgChLen = allChapters.reduce((s,c)=>s+(c.content?.length||0),0)/lastChNum;
@@ -3348,6 +4090,138 @@ function computeContinuityMetrics(p){
 
   return metrics;
 }
+
+// ─── story_state.json：构建/保存/加载 ───
+function buildStoryState(p){
+  const allCh = p.chapters||[];
+  const chCount = allCh.length;
+  const lastCh = chCount > 0 ? allCh[allCh.length-1] : null;
+
+  const ss = {
+    updatedAt: Date.now(),
+    chapters: (p.chapters||[]).map(c=>({number:c.number, status:c.status||'draft', wordCount:c.content?.length||0})),
+    characters: {},
+    plotThreads: {},
+    foreshadowingBank: [],
+    timeline: [],
+  };
+
+  // 收集角色名
+  const charNames = new Map();
+  Object.values(p.characters||{}).forEach(c=>{if(c.name){charNames.set(c.name,{role:c.role||'主要角色',status:'alive'});}});
+  Object.entries(p.readerData?.characters||{}).forEach(([n,info])=>{charNames.set(n,{role:info.role||'主要角色',status:'alive'});});
+
+  // 扫描每章，提取角色出现位置/情绪，推进时间线
+  charNames.forEach((meta, name)=>{
+    let lastSeen = 0, location = '未知', emotion = '平静';
+    for(const ch of allCh){
+      if(ch.content && ch.content.includes(name)){
+        lastSeen = ch.number;
+        const locMatch = ch.content.match(new RegExp(`${name}[^。，]{0,20}(?:在|来到|前往|离开|站在|坐在|躺在)([^。，]{1,15})`));
+        if(locMatch) location = locMatch[1];
+        const emoMatch = ch.content.match(new RegExp(`${name}[^。，]{0,20}(?:感到|觉得|心里|脸上|带着)([^。，]{1,10}(?:怒|喜|悲|惧|惊|恐|慌|忧|愁|烦|躁|安|静|冷|淡))`));
+        if(emoMatch) emotion = emoMatch[1];
+      }
+    }
+    ss.characters[name] = {
+      name, role: meta.role, status: meta.status, lastAppearance: lastSeen,
+      currentLocation: lastSeen > 0 ? location : '尚未登场',
+      emotionalState: lastSeen > 0 ? emotion : '未知',
+    };
+  });
+
+  // 情节线程
+  const branches = p.worldTree?.branches||p.readerData?.plot_structure?.branches||[];
+  branches.forEach((b,i)=>{
+    const startCh = b.start_chapter||b.chapter||1;
+    const isResolved = b.status==='resolved'||b.status==='已完结';
+    ss.plotThreads[`thread_${i+1}`] = {
+      name: b.name||`支线${i+1}`, status: isResolved ? 'resolved' : 'active',
+      introducedChapter: startCh, lastReferencedChapter: lastCh?.number||startCh,
+    };
+  });
+
+  // 伏笔库
+  const buds = p.worldTree?.buds||p.readerData?.plot_structure?.buds||[];
+  buds.forEach((b,i)=>{
+    const plantCh = b.chapter||b.planted||1;
+    ss.foreshadowingBank.push({
+      id: `bud_${i+1}`, foreshadow: (b.foreshadow||b.title||'').substring(0,60),
+      plantedChapter: plantCh, urgency: b.urgency||'中',
+      resolved: b.urgency==='已回收'||b.status==='resolved',
+    });
+  });
+
+  // 时间线
+  for(const ch of allCh){
+    if(ch.content){
+      ss.timeline.push({
+        chapter: ch.number, day: ch.number,
+        summary: ch.content.substring(0,60).replace(/\n/g,' '),
+      });
+    }
+  }
+
+  return ss;
+}
+
+async function saveStoryState(projectName){
+  const p = DB.projects[projectName]; if(!p) return;
+  const ss = buildStoryState(p);
+  p.storyState = ss;
+  saveFileToDisk(projectName, '', 'story_state.json', ss);
+}
+
+async function loadStoryState(projectName){
+  const p = DB.projects[projectName]; if(!p) return;
+  const content = await readFileFromDisk(projectName, '', 'story_state.json');
+  if(content){
+    try { p.storyState = JSON.parse(content); return true; } catch(e){}
+  }
+  p.storyState = buildStoryState(p);
+  return false;
+}
+
+// ─── 生成故事上下文（注入S2审查官） ───
+function getStoryContextForReviewer(p, chNum){
+  const ss = p?.storyState; if(!ss) return '';
+  const lines = [];
+  lines.push(`【故事上下文 — 审查时参考】`);
+  const activeChars = Object.values(ss.characters).filter(c=>c.lastAppearance >= chNum-3 || c.lastAppearance === 0);
+  if(activeChars.length){
+    lines.push(`\n活跃角色：`);
+    activeChars.forEach(c=>{
+      lines.push(`· ${c.name}(${c.role}) — 📍${c.currentLocation} 😶${c.emotionalState} 最近出场:第${c.lastAppearance||'?'}章`);
+    });
+  }
+  const activeThreads = Object.values(ss.plotThreads).filter(t=>t.status==='active');
+  if(activeThreads.length){
+    lines.push(`\n进行中的情节线：`);
+    activeThreads.forEach(t=>{
+      const inactive = (chNum||1) - t.lastReferencedChapter;
+      lines.push(`· ${t.name} (引入第${t.introducedChapter}章, ${inactive}章未推进)`);
+    });
+  }
+  const pendingBuds = ss.foreshadowingBank.filter(b=>!b.resolved);
+  if(pendingBuds.length){
+    lines.push(`\n待回收伏笔：`);
+    pendingBuds.forEach(b=>{
+      const age = (chNum||1) - b.plantedChapter;
+      lines.push(`· 第${b.plantedChapter}章: ${b.foreshadow} (已埋${age}章, ${b.urgency}优先级)`);
+    });
+  }
+  // 死亡角色备注（非硬性规定）
+  const deadChars = Object.values(ss.characters).filter(c=>c.status==='dead');
+  if(deadChars.length){
+    lines.push(`\n已死亡角色标记（⚠️仅供参考，非硬性规定）：`);
+    deadChars.forEach(c=>{
+      lines.push(`· 💀 ${c.name}（第${c.lastAppearance}章附近）`);
+    });
+    lines.push(`  → 如果当前章节出现这些角色，请判断是：a)合理闪回/回忆/幻觉/平行叙事；b)作者设下的假死伏笔；c)需标记的连续性错误。请根据上下文自行判断，不做一刀切处理。`);
+  }
+  return lines.join('\n');
+}
+
 const DIM_SUB_CHECKS = {
   plot: '情节逻辑是否自洽；因果关系是否清晰；情节推进是否有驱动力；是否存在情节漏洞；子情节是否与主线关联；转折是否合理（非巧合驱动）',
   character: '角色行为是否符合人设；角色动机是否清晰；角色是否有独立的"声音"；角色成长弧线是否可见；配角是否有存在价值；角色关系是否有张力',
@@ -3372,10 +4246,13 @@ async function callReviewer(projectName, chNum, content, role, temperature, dimW
   };
   const rc = roleConfig[role] || roleConfig.moderate;
   const dimSubList = DIM_KEYS.map((k,i)=>`${i+1}. 【${DIM_NAMES[i]}】\n   检查项：${DIM_SUB_CHECKS[k]||'综合评估'}`).join('\n\n');
+  // ★ 注入故事上下文以供连续性参考
+  const pCtx = DB.projects[projectName];
+  const storyCtx = pCtx ? getStoryContextForReviewer(pCtx, chNum) : '';
   const systemPrompt = `你是一位专业的小说${rc.roleDesc}，担任「${rc.label}」角色。
 
 ${rc.desc}
-
+${storyCtx ? '\n'+storyCtx+'\n' : ''}
 审查维度（共13项，每项含具体检查子项）：
 ${dimSubList}
 
@@ -3527,6 +4404,8 @@ async function startReview(projectName, chNum){
   const s1Flagged = s1Results.filter(r=>r.flagged);
   // 更新连续性指标（供节奏控制台展示）
   p.continuity = computeContinuityMetrics(p);
+  // ★ S1 后更新故事状态（角色出现章节/情绪更新）
+  await saveStoryState(projectName);
   logAnalysis('S1','S1机械闸扫描', s1Flagged.length?s1Flagged.map(r=>r.rule).join(', '):'✅全部通过');
 
   // ═══ Step 2-4: S2 三审查官 ═══
@@ -3556,7 +4435,7 @@ async function startReview(projectName, chNum){
     }
   }
 
-  // ═══ Step 5: 选票汇总 ═══
+  // ═══ Step 5: 选票汇总（不做去重，保留三审全部意见） ═══
   p._reviewStep = 5; renderers.review();
   const allSuggestions = [];
   reviews.forEach(rv=>{
@@ -3571,22 +4450,23 @@ async function startReview(projectName, chNum){
       });
     });
   });
-  // 去重
-  const seen = new Set();
-  const deduped = allSuggestions.filter(s=>{
-    const key = s.reviewer+'_'+(s.dimension||'x')+'_'+(s.proposed_change||s.description||'').substring(0,30);
-    if(seen.has(key)) return false; seen.add(key); return true;
-  });
-  logAnalysis('选票汇总', `${allSuggestions.length}条→去重${deduped.length}条`, '');
+  logAnalysis('选票汇总', `三审共${allSuggestions.length}条意见`, `${reviews.map(r=>r.label+'('+(r.suggestions||[]).length+')').join(' ')}}`);
 
-  // ═══ Step 6: 夹逼优选 ═══
+  // ═══ Step 6: 夹逼优选（对全部意见计算质量分） ═══
   p._reviewStep = 6; renderers.review();
-  const squeezeResult = computeSqueeze(deduped, reviews);
+  const squeezeResult = computeSqueeze(allSuggestions, reviews);
+  // ★ 将夹逼评分附加到每条建议上
+  if(squeezeResult.allScores){
+    squeezeResult.allScores.forEach((sc, i)=>{
+      if(allSuggestions[i]) allSuggestions[i]._squeeze = sc;
+    });
+  }
   logAnalysis('夹逼优选', squeezeResult.winner?`最优${squeezeResult.winner.dimension||''}`:'无', squeezeResult.proof||'');
 
   // ═══ Step 7: 投票确认 ═══
   p._reviewStep = 7; renderers.review();
   let finalSuggestion = squeezeResult.winner;
+  let voteRecord = null;
   if(squeezeResult.winner && squeezeResult.confidence<0.85 && squeezeResult.runnerUp){
     toast('🗳️ 夹逼置信度低，投票确认中...');
     const voteSystemPrompt = '你是一位最终裁决者，在两个修改建议中做出选择。';
@@ -3594,23 +4474,20 @@ async function startReview(projectName, chNum){
     try {
       const voteR = await callLLM([{role:'user', content:voteUserPrompt}],
         {max_tokens:512, temperature:0.2});
-      // ★ 保存投票 LLM 交互记录
+      // ★ 保存投票 LLM 交互记录到磁盘
       const av = p?.analysisCount || 1;
       const padded = String(chNum).padStart(3,'0');
-      saveFileToDisk(projectName, `projectLog/v${av}`, `voter_第${padded}章.json`, {
+      voteRecord = {
         chapter: chNum, timestamp: new Date().toISOString(),
         temperature: 0.2, model: DB.config?.model||'',
         systemPrompt: voteSystemPrompt, userPrompt: voteUserPrompt, response: voteR,
-        fullConversation: [
-          {role:'system', content: voteSystemPrompt},
-          {role:'user', content: voteUserPrompt},
-          {role:'assistant', content: voteR}
-        ],
-        candidateA: squeezeResult.winner.suggestion,
-        candidateB: squeezeResult.runnerUp.suggestion,
-      });
+        candidateA: squeezeResult.winner,
+        candidateB: squeezeResult.runnerUp,
+        voteResult: null,
+      };
+      saveFileToDisk(projectName, `projectLog/v${av}`, `voter_第${padded}章.json`, voteRecord);
       const jm = voteR.match(/\{[\s\S]*\}/);
-      if(jm){ const vd=JSON.parse(jm[0]); if(vd.vote_for==='B') finalSuggestion=squeezeResult.runnerUp; squeezeResult.voteResult=vd; }
+      if(jm){ const vd=JSON.parse(jm[0]); if(vd.vote_for==='B') finalSuggestion=squeezeResult.runnerUp; voteRecord.voteResult=vd; squeezeResult.voteResult=vd; }
     } catch(e){}
   }
 
@@ -3629,7 +4506,7 @@ async function startReview(projectName, chNum){
     reviewers: {},
     dimScores: dimAvgs.map((v,i)=>({dimension:DIM_NAMES[i], average:v*10})),
     feedback: reviews.map(r=>`${r.label}: ${r.comment||''}`).join('\n'),
-    allSuggestions: deduped,
+    allSuggestions: allSuggestions,
     squeezeResult: {
       winner: finalSuggestion?{id:finalSuggestion.id, strict:finalSuggestion.strict, moderate:finalSuggestion.moderate, lenient:finalSuggestion.lenient, width:finalSuggestion.width, convergence:finalSuggestion.convergence, quality:finalSuggestion.quality, suggestion:finalSuggestion.suggestion||''}:null,
       runnerUp: squeezeResult.runnerUp?{strict:squeezeResult.runnerUp.strict, moderate:squeezeResult.runnerUp.moderate, lenient:squeezeResult.runnerUp.lenient, suggestion:squeezeResult.runnerUp.suggestion||''}:null,
@@ -3652,7 +4529,7 @@ async function startReview(projectName, chNum){
 
   const ts = new Date().toISOString().replace(/[T:]/g,'-').slice(0,19);
   saveFileToDisk(projectName, 'reviews', `review_第${String(chNum).padStart(3,'0')}章_${ts}.json`, reviewRecord);
-  logAnalysis('审查完成', `第${chNum}章`, `总分${combinedScore} ${verdict}，${deduped.length}条建议`);
+  logAnalysis('审查完成', `第${chNum}章`, `总分${combinedScore} ${verdict}，${allSuggestions.length}条建议`);
 
   if(verdict==='pass') toast(`✅ 第${chNum}章审查完成（${combinedScore}分），可点击「定稿」确认`);
   else if(verdict==='revise') toast(`🔄 第${chNum}章 ${combinedScore}分，可逐条点击「应用此建议」修改`);
@@ -3734,7 +4611,7 @@ function computeSqueeze(suggestions, reviews){
 ${winner.squeezed?'✅ 夹逼区间收敛！严审和宽审达成一致，建议可信度高。':'⚠️ 夹逼区间较宽，建议置信度偏低。'}
 ${runnerUp?`\n备选建议质量分: ${(runnerUp.quality*100).toFixed(0)}%`:'\n仅有一条建议，夹逼定理平凡成立。'}`;
 
-  return {winner, runnerUp, confidence, proof};
+  return {winner, runnerUp, confidence, proof, allScores: coords};
 }
 
 // ═══════ 写作台页面 ═══════
@@ -3784,7 +4661,7 @@ renderers.writer = function(){
     <div style="display:flex;flex-direction:column;gap:10px">
       <div><label>章节号</label><input type="number" id="writerChNum" value="${nextCh}" min="1" style="width:80px"></div>
       <div><label>写作方向</label>
-        <textarea id="writerDirection" rows="4" placeholder="描述这一章要写什么：关键事件、角色发展、氛围基调……越具体越好" style="width:100%;resize:vertical"></textarea>
+        <textarea id="writerDirection" rows="4" placeholder="描述这一章要写什么：关键事件、角色发展、氛围基调……越具体越好" style="width:100%;resize:vertical;background:var(--bg2);color:var(--text-dim)"></textarea>
       </div>
       <div style="display:flex;gap:16px;flex-wrap:wrap">
         <div style="flex:1;min-width:140px">
@@ -3825,7 +4702,7 @@ renderers.writer = function(){
           <button class="btn btn-primary btn-sm" id="btnSaveChapter">🔍 分析本章</button>
         </div>
       </div>
-      <textarea id="writerContent" rows="15" style="width:100%;resize:vertical;font-size:13px;line-height:1.7;font-family:inherit"></textarea>
+      <textarea id="writerContent" rows="15" style="width:100%;resize:vertical;font-size:13px;line-height:1.7;font-family:inherit;background:var(--bg2);color:var(--text-dim)"></textarea>
     </div>
   </div>`;
 
@@ -3845,6 +4722,27 @@ renderers.writer = function(){
     sideHtml += `<div class="card"><div class="card-title">📋 写作上下文</div>
       <div style="font-size:12px;color:var(--text-dim);line-height:1.7;max-height:400px;overflow-y:auto">${context.replace(/\n/g,'<br>')}</div>
     </div>`;
+  }
+
+  // ★ 故事状态卡片
+  const ss = p.storyState;
+  if(ss?.characters){
+    sideHtml += `<div class="card"><div class="card-title">📋 故事快照</div>
+      <div style="font-size:11px;color:var(--text-dim);line-height:1.6">`;
+    const chars = Object.values(ss.characters).filter(c=>c.lastAppearance>0).slice(0,6);
+    chars.forEach(c=>{
+      const st = c.status==='dead'?'💀':c.status==='missing'?'❓':'🟢';
+      sideHtml += `<div>${st} <strong>${c.name}</strong> 📍${c.currentLocation} 😶${c.emotionalState}</div>`;
+    });
+    const activeThreads = Object.values(ss.plotThreads||{}).filter(t=>t.status==='active');
+    if(activeThreads.length){
+      sideHtml += `<hr class="sep" style="margin:4px 0"><div>🌿 ${activeThreads.length}条情节线进行中</div>`;
+    }
+    const pendingBuds = (ss.foreshadowingBank||[]).filter(b=>!b.resolved);
+    if(pendingBuds.length){
+      sideHtml += `<div>🌱 ${pendingBuds.length}个伏笔待回收</div>`;
+    }
+    sideHtml += `</div></div>`;
   }
 
   // 行为规律参考（可折叠）
