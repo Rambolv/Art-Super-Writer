@@ -380,6 +380,39 @@ Token Budget Decision:
                + Keep last 5 chapters intact
 ```
 
+### Review Chamber Data Flow / 审查室数据流
+
+```mermaid
+flowchart TB
+    subgraph 输入
+        A1["📄 章节正文"] --> B1["🔍 S1机械闸"]
+        A2["⚙️ anti_slop_rules"] --> B1
+        A1 --> B2["🔴 严审官"]
+        A1 --> B3["🟡 衡审官"]
+        A1 --> B4["🟢 宽审官"]
+        A3["📐 review_dimensions"] --> B2 & B3 & B4
+    end
+    subgraph 处理
+        B1 --> B5["📮 选票汇总"]
+        B2 & B3 & B4 --> B5
+        B5 --> B6["🔬 夹逼优选"]
+        B6 --> B7["🗳️ 投票确认"]
+        B7 --> B8["🚪 质量门禁"]
+    end
+    subgraph 输出
+        B8 --> C1["✅ 通过/修订/人工"]
+        B1 & B2 & B3 & B4 --> C3["💾 reviews/审查记录.json"]
+    end
+    subgraph 存储
+        D1["📄 chapters/ 正式章节"]
+        D2["📝 drafts/ 修改草稿 v1/v2/..."]
+        D3["📚 projectLog/ 版本历史"]
+    end
+    C3 --> D1 & D2 & D3
+```
+
+See [审查室数据流图.md](./审查室数据流图.md) for the complete data flow documentation with file paths, config sources, and function call chains.
+
 ---
 
 ## Roadmap / 开发路线图

@@ -1,0 +1,139 @@
+{
+  "chapter": 1,
+  "iteration": 1,
+  "timestamp": 1783654917704,
+  "finalScore": 50,
+  "squeezedScore": 50,
+  "verdict": "revise",
+  "passed": false,
+  "s1Results": [
+    {
+      "rule": "AI味短语",
+      "flagged": false
+    },
+    {
+      "rule": "AI味过渡",
+      "flagged": false
+    },
+    {
+      "rule": "AI味列举",
+      "flagged": true,
+      "detail": "发现1处: 第一，"
+    },
+    {
+      "rule": "过度解释",
+      "flagged": false
+    },
+    {
+      "rule": "情感直白",
+      "flagged": true,
+      "detail": "发现1处: 她觉得"
+    },
+    {
+      "rule": "多余修饰",
+      "flagged": false
+    },
+    {
+      "rule": "AI标准结尾",
+      "flagged": false
+    },
+    {
+      "rule": "重复标点",
+      "flagged": true,
+      "detail": "发现1处: ！！"
+    },
+    {
+      "rule": "段落过长",
+      "flagged": false
+    },
+    {
+      "rule": "对话比例",
+      "flagged": true,
+      "detail": "对话占比过低(0.0%)"
+    }
+  ],
+  "reviewers": {
+    "strict": {
+      "score": 50,
+      "comment": "审查异常: no key",
+      "strengths": [],
+      "weaknesses": []
+    },
+    "moderate": {
+      "score": 50,
+      "comment": "审查异常: no key",
+      "strengths": [],
+      "weaknesses": []
+    },
+    "lenient": {
+      "score": 50,
+      "comment": "审查异常: no key",
+      "strengths": [],
+      "weaknesses": []
+    }
+  },
+  "dimScores": [
+    {
+      "dimension": "情节",
+      "average": 50
+    },
+    {
+      "dimension": "角色",
+      "average": 50
+    },
+    {
+      "dimension": "对话",
+      "average": 50
+    },
+    {
+      "dimension": "节奏",
+      "average": 50
+    },
+    {
+      "dimension": "文风",
+      "average": 50
+    },
+    {
+      "dimension": "一致性",
+      "average": 50
+    },
+    {
+      "dimension": "情感冲击",
+      "average": 50
+    },
+    {
+      "dimension": "原创性",
+      "average": 50
+    },
+    {
+      "dimension": "可读性",
+      "average": 50
+    },
+    {
+      "dimension": "AI味检测",
+      "average": 50
+    },
+    {
+      "dimension": "角色心理",
+      "average": 50
+    },
+    {
+      "dimension": "角色关系",
+      "average": 50
+    },
+    {
+      "dimension": "情节合理性",
+      "average": 50
+    }
+  ],
+  "feedback": "🔴 严审: 审查异常: no key\n🟡 衡审: 审查异常: no key\n🟢 宽审: 审查异常: no key",
+  "revisionHistory": [],
+  "_steps": {
+    "s1": true,
+    "s2_strict": true,
+    "s2_moderate": true,
+    "s2_lenient": true,
+    "vote": true,
+    "gate": true
+  }
+}

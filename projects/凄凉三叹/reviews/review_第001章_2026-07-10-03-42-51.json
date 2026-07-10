@@ -1,0 +1,153 @@
+{
+  "chapter": 1,
+  "iteration": 1,
+  "timestamp": 1783654971948,
+  "finalScore": 53,
+  "squeezedScore": 50,
+  "verdict": "revise",
+  "passed": false,
+  "s1Results": [
+    {
+      "rule": "AI味短语",
+      "flagged": false
+    },
+    {
+      "rule": "AI味过渡",
+      "flagged": false
+    },
+    {
+      "rule": "AI味列举",
+      "flagged": true,
+      "detail": "发现1处: 第一，"
+    },
+    {
+      "rule": "过度解释",
+      "flagged": false
+    },
+    {
+      "rule": "情感直白",
+      "flagged": true,
+      "detail": "发现1处: 她觉得"
+    },
+    {
+      "rule": "多余修饰",
+      "flagged": false
+    },
+    {
+      "rule": "AI标准结尾",
+      "flagged": false
+    },
+    {
+      "rule": "重复标点",
+      "flagged": true,
+      "detail": "发现1处: ！！"
+    },
+    {
+      "rule": "段落过长",
+      "flagged": false
+    },
+    {
+      "rule": "对话比例",
+      "flagged": true,
+      "detail": "对话占比过低(0.0%)"
+    }
+  ],
+  "reviewers": {
+    "strict": {
+      "score": 50,
+      "comment": "审查异常: 未找到JSON",
+      "strengths": [],
+      "weaknesses": []
+    },
+    "moderate": {
+      "score": 50,
+      "comment": "情节发展完整但套路化，暴力场景渲染过度，角色心理刻画较浅，文风有一定表现力但缺乏新意。",
+      "strengths": [
+        "环境描写细致，能营造压抑氛围",
+        "部分对话符合人物身份，如黄毛的粗俗口吻",
+        "对舞蹈背景的融入增加了角色独特性"
+      ],
+      "weaknesses": [
+        "情节简单，基本依赖重复性暴力推进",
+        "角色尤其是女性角色心理过于单一，缺乏深度",
+        "警察介入等情节存在合理性瑕疵"
+      ]
+    },
+    "lenient": {
+      "score": 72,
+      "comment": "黑暗题材下情感冲击强烈，细节真实，但情节套路化和警察线简化略显不足。",
+      "strengths": [
+        "暴力与绝望氛围营造出色，如冰刀声、血迹等细节极具画面感",
+        "主角林刚的坚韧与无力感刻画真实，情感张力强"
+      ],
+      "weaknesses": [
+        "警察角色处理过于简单，缺乏合理性铺垫",
+        "部分情节依赖巧合（如黄毛恰好引来郎峰），略显俗套"
+      ]
+    }
+  },
+  "dimScores": [
+    {
+      "dimension": "情节",
+      "average": 60
+    },
+    {
+      "dimension": "角色",
+      "average": 53.33333333333333
+    },
+    {
+      "dimension": "对话",
+      "average": 50
+    },
+    {
+      "dimension": "节奏",
+      "average": 56.66666666666667
+    },
+    {
+      "dimension": "文风",
+      "average": 60
+    },
+    {
+      "dimension": "一致性",
+      "average": 63.33333333333333
+    },
+    {
+      "dimension": "情感冲击",
+      "average": 63.33333333333333
+    },
+    {
+      "dimension": "原创性",
+      "average": 50
+    },
+    {
+      "dimension": "可读性",
+      "average": 60
+    },
+    {
+      "dimension": "AI味检测",
+      "average": 70
+    },
+    {
+      "dimension": "角色心理",
+      "average": 53.33333333333333
+    },
+    {
+      "dimension": "角色关系",
+      "average": 50
+    },
+    {
+      "dimension": "情节合理性",
+      "average": 53.33333333333333
+    }
+  ],
+  "feedback": "🔴 严审: 审查异常: 未找到JSON\n🟡 衡审: 情节发展完整但套路化，暴力场景渲染过度，角色心理刻画较浅，文风有一定表现力但缺乏新意。\n🟢 宽审: 黑暗题材下情感冲击强烈，细节真实，但情节套路化和警察线简化略显不足。",
+  "revisionHistory": [],
+  "_steps": {
+    "s1": true,
+    "s2_strict": true,
+    "s2_moderate": true,
+    "s2_lenient": true,
+    "vote": true,
+    "gate": true
+  }
+}
