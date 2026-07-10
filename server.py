@@ -278,6 +278,20 @@ class RequestHandler(BaseHTTPRequestHandler):
             text = filepath.read_text(encoding="utf-8")
             self._json_response({"content": text, "path": str(filepath)})
 
+        elif path == "/api/project/delete-file":
+            name = data.get("project", "").strip()
+            subfolder = data.get("folder", "").strip()
+            filename = data.get("file", "").strip()
+            if not all([name, filename]):
+                self._error(400, "缺少参数")
+                return
+            filepath = PROJECTS_DIR / name / subfolder / filename if subfolder else PROJECTS_DIR / name / filename
+            if not filepath.exists():
+                self._error(404, "文件不存在")
+                return
+            filepath.unlink()
+            self._json_response({"deleted": True, "path": str(filepath)})
+
         elif path == "/api/project/list-files":
             name = data.get("project", "").strip()
             subfolder = data.get("folder", "").strip()

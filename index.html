@@ -4717,6 +4717,15 @@ renderers.writer = function(){
     </div>
   </div>`;
 
+  // ★ 前置SKILL管理卡片
+  sideHtml += `<div class="card"><div class="card-title">📦 前置SKILL</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">导入写作技巧/风格指南，写作时自动注入到提示词</div>
+    <div id="writerSkillList" style="font-size:12px;color:var(--text-dim);line-height:1.6;max-height:200px;overflow-y:auto;margin-bottom:6px">
+      <span style="color:var(--text-muted)">加载中...</span>
+    </div>
+    <button class="btn btn-sm btn-secondary" style="width:100%;font-size:11px" onclick="importWriterSkill('${locked.name}')">📥 导入SKILL</button>
+  </div>`;
+
   // 写作上下文面板
   if(context){
     sideHtml += `<div class="card"><div class="card-title">📋 写作上下文</div>
@@ -4751,6 +4760,18 @@ renderers.writer = function(){
   </details></div>`;
 
   side.innerHTML = sideHtml;
+
+  // ★ 异步加载已导入的SKILL列表
+  (async()=>{
+    const files = await listDiskFiles(locked.name, 'skills/external');
+    const skillList = document.getElementById('writerSkillList');
+    if(!skillList) return;
+    if(!files || !files.length){
+      skillList.innerHTML = '<span style="color:var(--text-muted)">暂无导入的SKILL</span>';
+    } else {
+      skillList.innerHTML = files.map(f=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--bg2)"><span title="${f}">📄 ${f.length>28?f.substring(0,26)+'...':f}</span><span style="cursor:pointer;color:var(--accent);font-size:10px" onclick="deleteWriterSkill('${locked.name}','${f.replace(/'/g,"\\'")}')" title="删除">🗑️</span></div>`).join('');
+    }
+  })();
 
   // ─── 已有章节展示（主面板下方，可折叠展开） ───
   if(chapters.length){
@@ -4973,16 +4994,90 @@ async function analyzeChapterContent(projectName, chNum, content){
 }
 
 // ═══════ 写作函数 ═══════
+// ═══════ 前置SKILL管理 ═══════
+
+// 导入SKILL：触发文件选择
+function importWriterSkill(projectName){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.md,.txt';
+  input.multiple = true;
+  input.onchange = (e) => handleSkillFileImport(e, projectName);
+  input.click();
+}
+
+// 处理文件选择：读取内容并保存到 skills/external/
+async function handleSkillFileImport(event, projectName){
+  const files = event.target.files;
+  if(!files || !files.length) return;
+  let imported = 0;
+  for(const file of files){
+    try {
+      const content = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(file, 'UTF-8');
+      });
+      if(content && content.trim()){
+        await saveFileToDisk(projectName, 'skills/external', file.name, content);
+        imported++;
+      }
+    } catch(e){
+      console.error('导入SKILL失败:', file.name, e);
+      toast(`❌ 导入 ${file.name} 失败`,'error');
+    }
+  }
+  if(imported > 0){
+    toast(`✅ 已导入 ${imported} 个SKILL`);
+    renderers.writer(); // 刷新列表
+  }
+}
+
+// 删除SKILL
+async function deleteWriterSkill(projectName, filename){
+  if(!confirm(`确定删除 SKILL「${filename}」？`)) return;
+  try {
+    await fetch('http://127.0.0.1:8899/api/project/delete-file', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({project:projectName, folder:'skills/external', file:filename})
+    });
+    toast(`🗑️ 已删除「${filename}」`);
+    renderers.writer();
+  } catch(e){
+    toast('❌ 删除失败（服务器未启动？）','error');
+  }
+}
+
+// 加载所有SKILL内容（用于注入提示词）
+async function loadWriterSkills(projectName){
+  try {
+    const files = await listDiskFiles(projectName, 'skills/external');
+    if(!files || !files.length) return '';
+    const contents = [];
+    for(const f of files){
+      const content = await readFileFromDisk(projectName, 'skills/external', f);
+      if(content && content.trim()){
+        contents.push(`### ${f.replace(/\\.(md|txt)$/i,'')}\n${content.trim()}`);
+      }
+    }
+    return contents.length ? '\n【前置写作技巧——以下规则必须在写作中严格遵守】\n\n' + contents.join('\n\n---\n\n') : '';
+  } catch(e){ return ''; }
+}
+
+// ═══════ 写作台：AI写作 ═══════
 async function writeChapter(projectName, chNum, direction, temperature, maxWords){
   const p = DB.projects[projectName];
   const context = getWriterContext(projectName);
   const chapters = p.chapters||[];
   const prevChapter = chapters.filter(c=>c.number<chNum).sort((a,b)=>b.number-a.number)[0];
 
+  // ★ 加载前置SKILL并注入到系统提示词
+  const skillsContent = await loadWriterSkills(projectName);
   const systemPrompt = `你是一位擅长${p.genre||'长篇'}小说创作的作家。你的任务是写出高质量的小说章节内容。
 
 ${WRITER_BEHAVIORAL_PRINCIPLES}
-
+${skillsContent}
 写作时请注意：
 1. 角色行为必须符合他们的性格和行为模式——不能为了推动剧情而让角色做出不符合人设的事
 2. 如果角色要做出的行为与其惯常模式不同，必须在上下文中提供充分的动机、铺垫和代价
