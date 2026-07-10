@@ -4719,11 +4719,11 @@ renderers.writer = function(){
 
   // ★ 前置SKILL管理卡片
   sideHtml += `<div class="card"><div class="card-title">📦 前置SKILL</div>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">导入写作技巧/风格指南，写作时自动注入到提示词</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">编写写作技巧，勾选=发送给LLM时激活</div>
     <div id="writerSkillList" style="font-size:12px;color:var(--text-dim);line-height:1.6;max-height:200px;overflow-y:auto;margin-bottom:6px">
       <span style="color:var(--text-muted)">加载中...</span>
     </div>
-    <button class="btn btn-sm btn-secondary" style="width:100%;font-size:11px" onclick="importWriterSkill('${locked.name}')">📥 导入SKILL</button>
+    <button class="btn btn-sm btn-secondary" style="width:100%;font-size:11px" onclick="showSkillEditor('${locked.name}')">✏️ 新建SKILL</button>
   </div>`;
 
   // 写作上下文面板
@@ -4761,15 +4761,30 @@ renderers.writer = function(){
 
   side.innerHTML = sideHtml;
 
-  // ★ 异步加载已导入的SKILL列表
+  // ★ 异步加载已导入的SKILL列表（带勾选框+删除）
   (async()=>{
     const files = await listDiskFiles(locked.name, 'skills/external');
     const skillList = document.getElementById('writerSkillList');
     if(!skillList) return;
     if(!files || !files.length){
-      skillList.innerHTML = '<span style="color:var(--text-muted)">暂无导入的SKILL</span>';
+      skillList.innerHTML = '<span style="color:var(--text-muted)">暂无SKILL，点击下方按钮新建</span>';
     } else {
-      skillList.innerHTML = files.map(f=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--bg2)"><span title="${f}">📄 ${f.length>28?f.substring(0,26)+'...':f}</span><span style="cursor:pointer;color:var(--accent);font-size:10px" onclick="deleteWriterSkill('${locked.name}','${f.replace(/'/g,"\\'")}')" title="删除">🗑️</span></div>`).join('');
+      const items = [];
+      for(const f of files){
+        const raw = await readFileFromDisk(locked.name, 'skills/external', f);
+        let skill = {title:f, content:'', active:true};
+        try { const p = JSON.parse(raw); if(p&&p.title) skill = p; } catch(e){ skill.content = raw||''; }
+        const fid = f.replace(/[^a-zA-Z0-9_\u4e00-\u9fff]/g,'_');
+        const checked = skill.active!==false ? 'checked' : '';
+        const titleEsc = (skill.title||f).replace(/'/g,"\\'");
+        const fEsc = f.replace(/'/g,"\\'");
+        items.push(`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--bg2)">
+          <input type="checkbox" ${checked} onchange="toggleSkillActive('${locked.name}','${fEsc}',this.checked)" title="勾选=发送LLM时激活" style="cursor:pointer;accent-color:var(--cyan)">
+          <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" onclick="showSkillEditor('${locked.name}','${fEsc}')" title="点击编辑">📄 ${(skill.title||f).length>22?(skill.title||f).substring(0,20)+'...':(skill.title||f)}</span>
+          <span style="cursor:pointer;color:var(--accent);font-size:11px;padding:1px 5px" onclick="deleteWriterSkill('${locked.name}','${fEsc}')" title="删除">✕</span>
+        </div>`);
+      }
+      skillList.innerHTML = items.join('');
     }
   })();
 
@@ -4996,69 +5011,131 @@ async function analyzeChapterContent(projectName, chNum, content){
 // ═══════ 写作函数 ═══════
 // ═══════ 前置SKILL管理 ═══════
 
-// 导入SKILL：触发文件选择
-function importWriterSkill(projectName){
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.md,.txt';
-  input.multiple = true;
-  input.onchange = (e) => handleSkillFileImport(e, projectName);
-  input.click();
-}
+// 打开SKILL编辑器弹窗
+function showSkillEditor(projectName, editFile){
+  const isEdit = !!editFile;
+  let modal = document.getElementById('skillEditorModal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'skillEditorModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:20px;width:520px;max-width:90vw;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+    <div style="font-weight:600;font-size:15px;margin-bottom:12px;color:var(--cyan)">${isEdit?'✏️ 编辑SKILL':'✏️ 新建SKILL'}</div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:12px;color:var(--text-dim)">标题</label>
+      <input id="skillTitleInput" type="text" placeholder="输入SKILL标题..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:12px;color:var(--text-dim)">内容（写作技巧/规则/风格指南）</label>
+      <textarea id="skillContentInput" rows="10" placeholder="输入SKILL内容..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;background:var(--bg2);color:var(--text);font-size:13px;line-height:1.6;resize:vertical;box-sizing:border-box;font-family:inherit"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-secondary btn-sm" onclick="closeSkillEditor()">放弃</button>
+      <button class="btn btn-primary btn-sm" id="btnSaveSkill">💾 保存</button>
+    </div>
+  </div>`;
+  modal.style.display = 'flex';
 
-// 处理文件选择：读取内容并保存到 skills/external/
-async function handleSkillFileImport(event, projectName){
-  const files = event.target.files;
-  if(!files || !files.length) return;
-  let imported = 0;
-  for(const file of files){
-    try {
-      const content = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsText(file, 'UTF-8');
-      });
-      if(content && content.trim()){
-        await saveFileToDisk(projectName, 'skills/external', file.name, content);
-        imported++;
-      }
-    } catch(e){
-      console.error('导入SKILL失败:', file.name, e);
-      toast(`❌ 导入 ${file.name} 失败`,'error');
+  // 如果是编辑模式，加载已有内容
+  if(isEdit){
+    (async()=>{
+      const raw = await readFileFromDisk(projectName, 'skills/external', editFile);
+      let skill = {title:editFile, content:'', active:true};
+      try { const p = JSON.parse(raw); if(p&&p.title) skill = p; } catch(e){ skill.content = raw||''; }
+      document.getElementById('skillTitleInput').value = skill.title||'';
+      document.getElementById('skillContentInput').value = skill.content||'';
+    })();
+  }
+
+  // 保存按钮事件
+  document.getElementById('btnSaveSkill').onclick = async () => {
+    const title = document.getElementById('skillTitleInput').value.trim();
+    const content = document.getElementById('skillContentInput').value.trim();
+    if(!title){ toast('请输入标题','warn'); return; }
+    if(!content){ toast('请输入内容','warn'); return; }
+
+    // 生成安全的文件名
+    const safeName = 'skill_'+title.replace(/[\\/:*?"<>|]/g,'_').substring(0,40)+'.json';
+    const skillData = JSON.stringify({title, content, active: true}, null, 2);
+    await saveFileToDisk(projectName, 'skills/external', safeName, skillData);
+
+    // 如果编辑的是旧文件且文件名变了，删除旧文件
+    if(isEdit && editFile !== safeName){
+      try {
+        await fetch('http://127.0.0.1:8899/api/project/delete-file', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({project:projectName, folder:'skills/external', file:editFile})
+        });
+      } catch(e){}
     }
-  }
-  if(imported > 0){
-    toast(`✅ 已导入 ${imported} 个SKILL`);
-    renderers.writer(); // 刷新列表
-  }
+
+    closeSkillEditor();
+    toast('✅ SKILL已保存');
+    renderers.writer();
+  };
+
+  // 点击背景关闭
+  modal.onclick = function(e){ if(e.target === modal) closeSkillEditor(); };
 }
 
-// 删除SKILL
+function closeSkillEditor(){
+  const modal = document.getElementById('skillEditorModal');
+  if(modal) modal.style.display = 'none';
+}
+
+// 切换SKILL激活状态
+async function toggleSkillActive(projectName, filename, active){
+  try {
+    const raw = await readFileFromDisk(projectName, 'skills/external', filename);
+    let skill = {title:filename, content:'', active:true};
+    try { const p = JSON.parse(raw); if(p&&p.title) skill = p; } catch(e){ skill.content = raw||''; }
+    skill.active = active;
+    await saveFileToDisk(projectName, 'skills/external', filename, JSON.stringify(skill, null, 2));
+    toast(active ? `✅ 已激活「${skill.title}」` : `⏸️ 已停用「${skill.title}」`);
+  } catch(e){ toast('❌ 操作失败','error'); }
+}
+
+// 删除SKILL（二次确认）
 async function deleteWriterSkill(projectName, filename){
-  if(!confirm(`确定删除 SKILL「${filename}」？`)) return;
+  // 先读取标题
+  let title = filename;
+  try {
+    const raw = await readFileFromDisk(projectName, 'skills/external', filename);
+    try { const p = JSON.parse(raw); if(p&&p.title) title = p.title; } catch(e){}
+  } catch(e){}
+
+  // 二次确认弹窗
+  const confirmed = confirm(`确定删除 SKILL「${title}」？\n\n此操作不可撤销。`);
+  if(!confirmed) return;
+
   try {
     await fetch('http://127.0.0.1:8899/api/project/delete-file', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({project:projectName, folder:'skills/external', file:filename})
     });
-    toast(`🗑️ 已删除「${filename}」`);
+    toast(`🗑️ 已删除「${title}」`);
     renderers.writer();
   } catch(e){
     toast('❌ 删除失败（服务器未启动？）','error');
   }
 }
 
-// 加载所有SKILL内容（用于注入提示词）
+// 加载所有激活的SKILL内容（用于注入提示词）
 async function loadWriterSkills(projectName){
   try {
     const files = await listDiskFiles(projectName, 'skills/external');
     if(!files || !files.length) return '';
     const contents = [];
     for(const f of files){
-      const content = await readFileFromDisk(projectName, 'skills/external', f);
-      if(content && content.trim()){
-        contents.push(`### ${f.replace(/\\.(md|txt)$/i,'')}\n${content.trim()}`);
+      const raw = await readFileFromDisk(projectName, 'skills/external', f);
+      if(!raw || !raw.trim()) continue;
+      let skill = {title:f, content:'', active:true};
+      try { const p = JSON.parse(raw); if(p&&p.title) skill = p; } catch(e){ skill.content = raw; }
+      // ★ 只注入激活的SKILL
+      if(skill.active !== false && skill.content && skill.content.trim()){
+        contents.push(`### ${skill.title || f.replace(/\.json$/,'')}\n${skill.content.trim()}`);
       }
     }
     return contents.length ? '\n【前置写作技巧——以下规则必须在写作中严格遵守】\n\n' + contents.join('\n\n---\n\n') : '';
