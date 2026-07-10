@@ -2897,6 +2897,22 @@ ${dimSubList}
       {max_tokens:8192, temperature}
     );
 
+    // ★ 保存完整的 LLM 交互记录到磁盘
+    const p = DB.projects[projectName];
+    const av = p?.analysisCount || 1;
+    const padded = String(chNum).padStart(3,'0');
+    const roleFile = `reviewer_${role}_第${padded}章.json`;
+    saveFileToDisk(projectName, `projectLog/v${av}`, roleFile, {
+      chapter: chNum, reviewer: role, timestamp: new Date().toISOString(),
+      temperature, model: DB.config?.model||'',
+      systemPrompt, userPrompt, response: reply,
+      fullConversation: [
+        {role:'system', content: systemPrompt},
+        {role:'user', content: userPrompt},
+        {role:'assistant', content: reply}
+      ]
+    });
+
     // 解析JSON
     const jsonMatch = reply.match(/\{[\s\S]*\}/);
     if(!jsonMatch) throw new Error('未找到JSON');
@@ -3052,10 +3068,27 @@ async function startReview(projectName, chNum){
   let finalSuggestion = squeezeResult.winner;
   if(squeezeResult.winner && squeezeResult.confidence<0.85 && squeezeResult.runnerUp){
     toast('🗳️ 夹逼置信度低，投票确认中...');
+    const voteSystemPrompt = '你是一位最终裁决者，在两个修改建议中做出选择。';
+    const voteUserPrompt = `作为最终裁决者，在两个修改建议中投票选择一个。\n\n建议A: ${squeezeResult.winner.suggestion||''}\n\n建议B: ${squeezeResult.runnerUp.suggestion||''}\n\n输出JSON: {"vote_for":"A|B","confidence":0.0-1.0,"reasoning":"理由"}`;
     try {
-      const voteR = await callLLM([{role:'user', content:
-        `作为最终裁决者，在两个修改建议中投票选择一个。\n\nA: ${squeezeResult.winner.suggestion||''}\n\nB: ${squeezeResult.runnerUp.suggestion||''}\n\n输出JSON: {"vote_for":"A|B","confidence":0.0-1.0,"reasoning":"理由"}`}],
+      const voteR = await callLLM([{role:'user', content:voteUserPrompt}],
         {max_tokens:512, temperature:0.2});
+      // ★ 保存投票 LLM 交互记录
+      const av = p?.analysisCount || 1;
+      const padded = String(chNum).padStart(3,'0');
+      saveFileToDisk(projectName, `projectLog/v${av}`, `voter_第${padded}章.json`, {
+        chapter: chNum, timestamp: new Date().toISOString(),
+        temperature: 0.2, model: DB.config?.model||'',
+        systemPrompt: voteSystemPrompt, userPrompt: voteUserPrompt, response: voteR,
+        fullConversation: [
+          {role:'system', content: voteSystemPrompt},
+          {role:'user', content: voteUserPrompt},
+          {role:'assistant', content: voteR}
+        ],
+        candidateA: squeezeResult.winner.suggestion,
+        candidateB: squeezeResult.runnerUp.suggestion,
+      });
+      const jm = voteR.match(/\{[\s\S]*\}/);
       const jm = voteR.match(/\{[\s\S]*\}/);
       if(jm){ const vd=JSON.parse(jm[0]); if(vd.vote_for==='B') finalSuggestion=squeezeResult.runnerUp; squeezeResult.voteResult=vd; }
     } catch(e){}
