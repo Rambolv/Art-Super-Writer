@@ -881,10 +881,10 @@ async function tryCreateDiskFolders(name){
   }
 }
 
-function saveFileToDisk(project, subfolder, filename, content){
+async function saveFileToDisk(project, subfolder, filename, content){
   if(!content) return;
   const text = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
-  fetch('http://127.0.0.1:8899/api/project/save-file', {
+  await fetch('http://127.0.0.1:8899/api/project/save-file', {
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({project, folder:subfolder, filename, content:text})
   }).catch(()=>{});
