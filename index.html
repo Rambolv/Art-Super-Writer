@@ -2785,6 +2785,7 @@ async function loadReviewChapterContent(projectName, chNum){
 }
 
 // ─── 加载历史审查文件列表到下拉框 ───
+let _reviewHistorySelectedFile = ''; // 记住用户选中的历史审查文件
 async function loadReviewFileList(projectName, chNum){
   const sel = document.getElementById('reviewHistorySelect');
   if(!sel) return;
@@ -2799,6 +2800,10 @@ async function loadReviewFileList(projectName, chNum){
       const label = timeMatch ? timeMatch[1].replace(/-/g,':') : fname;
       sel.innerHTML += `<option value="${fname}">🕐 ${label}</option>`;
     });
+    // ★ 恢复之前选中的历史审查文件
+    if(_reviewHistorySelectedFile && [...sel.options].some(o=>o.value===_reviewHistorySelectedFile)){
+      sel.value = _reviewHistorySelectedFile;
+    }
   } catch(e){}
 }
 
@@ -2816,11 +2821,15 @@ async function onReviewHistorySelect(chNum){
 
   if(!fname){
     // 切回当前审查结果
+    _reviewHistorySelectedFile = '';
     statusEl.textContent = '';
     await loadReviewState(locked.name);
     renderers.review();
     return;
   }
+
+  // ★ 记住选中的文件
+  _reviewHistorySelectedFile = fname;
 
   const content = await readFileFromDisk(locked.name, 'reviews', fname);
   if(!content){ toast('无法加载审查记录','error'); return; }
