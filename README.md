@@ -2,502 +2,564 @@
 
 # 🖋️ 超逸写手 — Art Super Writer
 
-**AI 辅助长篇小说创作系统**  
-**AI-Assisted Novel Writing System**
+**AI 辅助长篇小说创作系统 | AI-Assisted Novel Writing System**
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)](https://python.org)
-[![HTML5](https://img.shields.io/badge/Frontend-HTML5_SSA-orange?logo=html5)](https://html.spec.whatwg.org/)
+[![HTML5](https://img.shields.io/badge/Frontend-HTML5_VanillaJS-orange?logo=html5)](https://html.spec.whatwg.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/Rambolv/Art-Super-Writer?style=social)](https://github.com/Rambolv/Art-Super-Writer)
 
-> **让每一位创作者都能拥有专属的 AI 编辑团队**  
-> **Give every writer their own AI editorial team**
+> 让每一位创作者都能拥有专属的 AI 编辑团队
+> Give every writer their own AI editorial team
 
 </div>
 
 ---
 
-## 📋 Table of Contents / 目录
+## 📖 语言 / Language
 
-- [Overview / 概述](#overview--概述)
-- [Features / 功能特性](#features--功能特性)
-- [Tech Stack / 技术栈](#tech-stack--技术栈)
-- [Quick Start / 快速开始](#quick-start--快速开始)
-- [Usage Guide / 使用指南](#usage-guide--使用指南)
-- [Project Structure / 项目结构](#project-structure--项目结构)
-- [Design Philosophy / 设计理念](#design-philosophy--设计理念)
-- [Pros & Cons / 优劣势分析](#pros--cons--优劣势分析)
-- [Configuration / 配置说明](#configuration--配置说明)
-- [Data Flow / 数据流程](#data-flow--数据流程)
-- [Roadmap / 开发路线图](#roadmap--开发路线图)
-- [Troubleshooting / 常见问题](#troubleshooting--常见问题)
-- [License / 许可证](#license--许可证)
+本 README 完整提供中英双语。软件界面可通过右上角 **中文/EN** 按钮一键切换。
+This README is fully bilingual. The app UI supports one-click Chinese/English switching via the top-right **中文/EN** button.
 
 ---
 
-## Overview / 概述
+# 🇨🇳 中文版
 
-### 🇨🇳 中文
+## 概述
 
-**超逸写手（Art Super Writer）** 是一款 AI 辅助长篇小说创作系统。它不像普通的写作工具那样只做文字编辑，而是模拟了一个**完整的编辑团队工作流**：
+**超逸写手（Art Super Writer）** 是一款 AI 辅助长篇小说创作系统。它模拟了一个**完整的编辑团队工作流**：
 
-1. **AI 读者** — 通读你的小说，从普通读者视角反馈阅读体验
-2. **AI 分析师** — 提取剧情结构（主线、支线、伏笔）、角色档案、节奏数据
-3. **AI 写作助手** — 基于分析结果，辅助你创作下一章，保持角色一致性和情节连贯性
-4. **AI 审查官** — 三位不同风格的审查官（严审/衡审/宽审）并行评审，通过夹逼定理投票选出最佳方案
+| 角色 | 职责 |
+|------|------|
+| 🧠 **AI 分析师** | 8 步多轮对话深度阅读你的小说，提取剧情结构、角色档案、节奏数据 |
+| ✍️ **AI 写作助手** | 基于分析结果，注入世界树/角色池/节奏数据作为上下文，辅助创作下一章 |
+| 🔍 **AI 审查官** | 三位不同风格审查官（严审/衡审/宽审）并行评审 + 夹逼定理投票 + 质量门禁 |
+| 📊 **AI 读者** | 从真实读者视角反馈阅读体验，标注翻页吸引力和读者想知道的问题 |
 
 > 🎯 **目标用户**：长篇小说创作者、网文作者、任何希望借助 AI 提升写作效率和质量的人。
 
-### 🇬🇧 English
+---
 
-**Art Super Writer (ASR Writer)** is an AI-assisted novel writing system. Unlike ordinary writing tools, it simulates a **complete editorial workflow**:
+## 功能特性（全部已完成 ✅）
 
-1. **AI Reader** — Reads your entire novel and provides feedback from a real reader's perspective
-2. **AI Analyst** — Extracts plot structure (main plot, subplots, foreshadowing), character profiles, and pacing data
-3. **AI Writing Assistant** — Uses analysis results to help you write the next chapter, maintaining character consistency and plot coherence
-4. **AI Reviewers** — Three reviewers (Strict / Balanced / Lenient) evaluate in parallel, using Squeeze Theorem voting to select the best result
-
-> 🎯 **Target Audience**: Novel writers, web fiction authors, and anyone who wants to leverage AI to improve writing efficiency and quality.
+| 模块 | 功能 |
+|------|------|
+| 📁 **项目管理** | 创建/锁定/删除项目，导入 `.md`/`.txt` 文件 |
+| 🧠 **AI 读者分析** | 8 步多轮对话全自动分析：逐章阅读→故事结构→角色印象→节奏感受→综合JSON |
+| ✍️ **写作台** | 上下文注入（世界树/角色池/节奏），流式 LLM 生成，保存草稿，定稿到章节 |
+| 🔍 **审查室** | S1 机械闸（19 条正则+连续性引擎）→ S2 三审查官（严/衡/宽）→ 夹逼投票 → 质量门禁 → 修订循环 |
+| 🌳 **世界树** | 四维可视化：主干（主线）/ 枝丫（支线）/ 芽（伏笔）/ 根系（世界观设定） |
+| 🧠 **角色池** | 六芒星雷达图、角色卡折叠展开、添加/编辑/删除角色、自定义 AI 角色分析 |
+| 📊 **节奏控制台** | 逐章阅读体验数据、读者最想知道的问题、整体节奏评估、连续性指标仪表盘 |
+| 🔐 **API Key 加密** | XOR + Base64 加密 + 机器指纹绑定，双模式密钥管理 |
+| 🌐 **双语言** | 中文/English 一键切换 |
+| 💾 **本地持久化** | 全部数据写入磁盘文件夹，刷新/重启不丢失 |
+| 📋 **历史日志** | 分析日志 + 操作日志，含时间线和会话标记 |
 
 ---
 
-## Features / 功能特性
+## 快速开始
 
-### ✅ Completed / 已完成
+### 前提条件
 
-| Feature / 功能 | Description / 说明 |
-|----------------|-------------------|
-| 📁 **Project Management** | Create / select / lock / delete projects; import `.md` / `.txt` files |
-| ⚙️ **Settings Panel** | LLM provider / API Key (encrypted + dual-mode management) / quality gate thresholds / 13-dimension weights |
-| 🤖 **AI Reader Analysis** | 8-step multi-turn dialogue with DeepSeek API to analyze full novel |
-| 🌳 **World Tree** | Visualize main plot, subplots, foreshadowing ("buds"), world-building ("roots") |
-| 🧠 **Character Pool** | Character cards with personality tags, traits, relationships, consistency warnings |
-| 📊 **Tension Console** | Per-chapter reading experience, reader questions, pacing guidance |
-| 🔐 **API Key Security** | XOR + Base64 encryption with machine fingerprint binding |
-| 🌐 **I18n Support** | Chinese / English language switching |
-| 💾 **Local Persistence** | All data saved to disk files in project folders |
+- **Python 3.10+**（[下载](https://python.org/downloads)）
+- **DeepSeek API Key**（[获取](https://platform.deepseek.com/)）
 
-### ⏳ Planned / 待开发
-
-| Feature / 功能 | Description / 说明 |
-|----------------|-------------------|
-| ✍️ **Writing Studio** | Core writer module — inject world tree, character pool, rhythm data as AI context |
-| 🔍 **Review Chamber** | S1 regex gate + S2 three reviewers + Squeeze Theorem voting + quality gate |
-| 📜 **History Log** | Project operation history timeline |
-
----
-
-## Tech Stack / 技术栈
-
-| Layer / 层 | Technology / 技术 |
-|-------------|-------------------|
-| **Frontend** | HTML5 + CSS3 + Vanilla JavaScript (Single Page Application, ~2000 lines in one file) |
-| **Backend** | Python 3 + `http.server` (port 8899, for disk I/O) |
-| **Chart** | Chart.js v4.4.7 (quality trends) |
-| **LLM API** | DeepSeek API (browser-side direct call) |
-| **Encryption** | XOR + Base64 (API Key protection) |
-
-### Why Vanilla JS? / 为什么用纯 JS？
-
-- Zero build tooling — edit and refresh, instant feedback
-- Zero dependencies — just a browser and Python
-- Single HTML file — easy to share, back up, and deploy
-
----
-
-## Quick Start / 快速开始
-
-### Prerequisites / 前提条件
-
-- **Python 3.10+** installed ([Download](https://python.org/downloads))
-- A **DeepSeek API key** ([Get one here](https://platform.deepseek.com/))
-
-### Installation / 安装
-
-**Option 1: One-click launcher (recommended)**
+### 安装
 
 ```bash
-# Clone the repo
 git clone https://github.com/Rambolv/Art-Super-Writer.git
-cd Art-Super-Writer
-
-# Set up virtual environment
+cd Art-Super-Writer/standalone
 python -m venv .venv
-.venv\Scripts\activate  # Windows
-# source .venv/bin/activate  # macOS / Linux
-
-# Install dependencies (only http.server, which is built-in; no extra packages needed)
-
-# Launch
+.venv\Scripts\activate
 python launcher.py
 ```
 
-**Option 2: Manual start**
+浏览器打开 `http://127.0.0.1:8899`。
 
-```bash
-# Start the Python backend server
-.venv\Scripts\python server.py
-
-# Then open index.html in your browser
-# Or simply double-click start_server.bat (Windows)
-```
-
-Then open `http://127.0.0.1:8899` (server auto-serves `index.html`).
-
-### First Steps / 首次使用
-
-1. **Create a project** → Enter a project name and click "Create"
-2. **Lock the project** → Click the lock icon to enable other modules
-3. **Import your novel** → Upload `.md` or `.txt` files
-4. **Add your API Key** → Go to Settings, enter your DeepSeek API Key
-5. **Analyze** → Click the "Analyze" button, AI will read and analyze your entire novel
-6. **Explore results** → View World Tree, Character Pool, Tension Console
+> 💡 Windows 用户也可以直接双击 `start_server.bat`。
 
 ---
 
-## Usage Guide / 使用指南
+## 完整使用流程
 
-### 📁 Project Management / 项目管理
+### 第一步：配置 API Key
+
+1. 点击左侧导航「⚙️ 设置」
+2. 在「LLM 供应商」选择 **DeepSeek**
+3. 输入你的 API Key，点击「🔑 保存密钥」
+4. 点击「🔌 测试连接」确认可用
+
+### 第二步：创建/导入项目
+
+1. 点击「📁 项目管理」
+2. 右侧「🆕 创建新项目」→ 输入小说名称、故事前提、类型 → 点击「✨ 创建」
+3. 或者点击「📥 导入作品」→ 选择已有的 `.md` 或 `.txt` 章节文件 →「📥 导入」
+
+### 第三步：锁定项目
+
+1. 在项目列表中，找到你的项目
+2. 点击「🔒 锁定」按钮
+3. 锁定后，所有功能模块（写作台/审查室/世界树/角色池等）均以该项目为核心运作
+
+### 第四步：AI 分析
+
+1. 点击「🧠 角色池」（或其他分析相关页面）
+2. 点击「🔄 AI 重新分析」按钮
+3. AI 将执行 **8 步多轮对话**：
+   - 第 1 轮：逐章阅读体验
+   - 第 2 轮：故事结构提取（主线/支线/伏笔/设定）
+   - 第 3 轮：角色印象分析
+   - 第 4 轮：节奏感受评估
+   - 第 5 步：综合 JSON 数据生成
+
+> ⚠️ 分析过程中请勿刷新页面。分析完成后数据自动保存到磁盘。
+
+### 第五步：查看分析结果
+
+分析完成后，可以在各模块查看结果：
+
+- **🌳 世界树** — 主线推进到哪些节点、支线状态、未解决伏笔（按紧急度排序）、世界观设定
+- **🧠 角色池** — 每个角色的定位、特点、行事风格、在意/害怕、人际关系、言行一致性警告
+- **📊 节奏控制台** — 每章翻页吸引力评分、情感变化曲线、读者最想知道的问题
+
+### 第六步：AI 辅助写作
+
+1. 点击「✍️ 写作台」
+2. 左侧是写作表单：
+   - **写作方向**：输入本章想要写的内容方向
+   - **温度参数**：调高 = 更有创意，调低 = 更稳定
+   - **字数目标**：设定本章目标字数
+3. 点击「✍️ 开始写作」，AI 将**流式生成**内容（实时显示）
+4. 生成完成后可以：
+   - 「💾 保存草稿」→ 保存到 `drafts/` 文件夹
+   - 「📝 定稿到章节」→ 正式写入 `chapters/` 文件夹
+   - 「📊 分析本章」→ 对本章内容进行独立分析
+
+> 💡 AI 写作时会自动注入：世界树数据、角色档案、节奏数据、写作建议——确保角色一致性和情节连贯性。
+
+### 第七步：审查与修订
+
+1. 点击「🔍 审查室」
+2. 选择要审查的章节 → 点击「🔍 审查」
+3. 审查流水线自动执行：
 
 ```
-[Create Project] → Enter name → Lock project 🔒
-    ↓
-[Import Files] → Upload .md/.txt files (multi-file supported)
-    ↓
-[Analyze] → One-click, AI Reader analyzes the full novel
-    ↓
-[Explore Modules] → World Tree / Character Pool / Tension Console
+⚙️ S1 机械闸（19 条正则规则 + 连续性引擎）
+   ├── 标点检查：半角标点混入、破折号过量、省略号滥用
+   ├── AI 禁用句式：总结性短语、二元对比模板、句首填充词、自问自答
+   ├── 结构检查：段落长度均匀性、句子单一性
+   └── 连续性检查：角色缺席、支线停滞、伏笔超期、死角色活跃
+        ↓
+🔴 S2 严审官（温度 0.3，严格标准）
+🟡 S2 衡审官（温度 0.3，综合评价）
+🟢 S2 宽审官（温度 0.4，关注亮点）
+        ↓
+🗳️ 夹逼定理投票（三审取中值 + 13 维度加权）
+        ↓
+🚪 质量门禁（通过≥75 / 修订≥50 / 人工<50）
+        ↓
+🔄 如需修订 → AI 自动修订 → 重审 → 最多 3 次迭代
 ```
 
-### 🏠 Home Page
+4. 编辑器支持 **撤销/重做**（Ctrl+Z / Ctrl+Y）
+5. 点击建议卡片可**自动定位并应用修改**
 
-- **Create new project** — Name your writing project
-- **Select existing project** — Click to switch
-- **Lock system** — Prevents accidental use of unrelated modules
+### 第八步：定稿与管理
 
-### 🌳 World Tree / 世界树
+- 审查通过后，在编辑器中点击「✅ 已定稿」确认
+- 在「项目管理」页可查看项目统计：章节数、角色数、总字数、均分
+- 点击「💾 导出到磁盘文件夹」将所有数据写入磁盘
 
-Visualizes your novel's structure through four metaphors:
+### 日常使用循环
 
-| Metaphor / 隐喻 | Meaning / 含义 |
-|----------------|---------------|
-| **Trunk (主干)** | Main plot events, ordered chronologically with importance scores |
-| **Branches (枝丫)** | Subplots in progress, with relation score to main plot |
-| **Buds (芽)** | Unresolved foreshadowing, sorted by reader urgency |
-| **Roots (根系)** | World-building: locations, rules, history, other settings |
+```
+📝 写作 → 🔍 审查 → 🔄 修订 → ✅ 定稿
+   ↑                              ↓
+   └──── 分析结果回流注入 ←────────┘
+```
 
-### 🧠 Character Pool / 角色池
-
-Each character has:
-- Role classification (Protagonist / Antagonist / Major / Minor)
-- Personality traits and decision-making style
-- What they care about and fear most
-- Relationship map with other characters
-- Consistency warnings (behaviors that might break character)
-
-### 📊 Tension Console / 节奏控制台
-
-- Per-chapter reading appeal and emotion scores
-- Top questions readers want answered
-- Overall pacing assessment and next chapter guidance
+每次写完新章后，建议重新运行 AI 分析以更新世界树和角色数据，让下一章的写作拥有最新上下文。
 
 ---
 
-## Project Structure / 项目结构
+## 项目结构
 
 ```
 standalone/
-├── index.html               # Main app (single HTML file, all UI/CSS/JS)
-├── server.py                # Python HTTP API server (port 8899)
-├── launcher.py              # One-click launcher script
-├── start_server.bat         # Server startup batch file (Windows)
-├── README.md                # This file
-├── .gitignore               # Git ignore rules
+├── index.html              # 主应用（单文件，~5300行）
+├── server.py               # Python HTTP API 服务器（端口 8899）
+├── launcher.py             # 一键启动脚本
+├── 启动超逸写手.bat          # 一键启动批处理
+├── start_server.bat        # 仅启动服务器
 │
-├── projects/                # All your novel projects
-│   ├── __asr_writer_meta__/ # System metadata (API keys, etc.)
-│   └── {project_name}/      # Each project's folder
-│       ├── chapters/        # Chapter files (.md)
-│       ├── drafts/          # Draft versions
-│       ├── reviews/         # Review records
-│       ├── worldTreeData/   # Plot structure data (JSON)
-│       ├── characterProfiles/ # Character profiles
-│       ├── tensionReports/  # Pacing reports
-│       ├── fuzzyMemory/     # Fuzzy memory (compressed summaries)
-│       ├── projectLog/      # Analysis logs and reports
+├── projects/               # 所有小说项目数据
+│   └── {项目名}/
+│       ├── chapters/        # 章节 .md 文件
+│       ├── drafts/          # 写作草稿
+│       ├── reviews/         # 审查记录 JSON
+│       ├── characters/      # 角色独立 JSON
+│       ├── characterProfiles/ # 角色档案/批量备份
+│       ├── worldTreeData/   # 世界树 JSON
+│       ├── tensionReports/  # 节奏报告
+│       ├── fuzzyMemory/     # 模糊记忆
+│       ├── projectLog/      # 分析日志
+│       ├── skills/          # 写作技巧库
+│       ├── config/          # 项目配置
+│       ├── styleMemory/     # 风格记忆
+│       └── referenceNotes/  # 参考笔记
+```
+
+---
+
+## 设计理念
+
+| # | 原则 | 说明 |
+|---|------|------|
+| 1 | **LLM 以读者身份分析** | AI 扮演刚读完小说的普通读者，而非文学评论家 |
+| 2 | **分析结果回流写作** | 世界树/角色池/节奏数据自动注入写作台 LLM 上下文 |
+| 3 | **一次写好** | 追求单次写作质量，不过度依赖多轮修订 |
+| 4 | **展示与注入并行** | 数据既要给人看，也要同时注入 AI 写作上下文 |
+| 5 | **LLM 自行归类输出** | LLM 直接输出结构化 JSON，前端只负责存储和展示 |
+| 6 | **免强制心理学框架** | 不做 OCEAN/Dark Triad 硬性标定，读者自然描述角色 |
+| 7 | **世界树 ≠ 模糊记忆** | 世界树 = 精确结构（无损）；模糊记忆 = 压缩回退（有损） |
+| 8 | **夹逼定理优选** | 三审取中间值，避免极端评分，数学上保证稳定性 |
+
+---
+
+## 配置说明
+
+### 质量门禁阈值
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| 通过阈值 | 75 | ≥此分直接通过 |
+| 修订阈值 | 50 | ≥此分自动修订 |
+| 最大迭代次数 | 3 | 修订重审最多轮数 |
+| 严审最低维度分 | 5 | 任何维度低于此分 → 人工处理 |
+
+---
+
+## 优劣势分析
+
+### ✅ 优势
+
+- **零配置** — 仅需浏览器 + Python，无需 npm/node/数据库
+- **单文件架构** — 前端全部在一个 HTML 文件中，易于理解和修改
+- **深度分析** — 8 步多轮对话提取丰富的故事洞察
+- **读者视角** — AI 以读者而非机器视角评判
+- **夹逼审查** — 三审官+数学投票，避免单一评判偏差
+
+### ❌ 局限性
+
+- **需 API Key** — 必须有 DeepSeek 或兼容 LLM 的 API Key
+- **依赖网络** — AI 功能需要互联网连接
+- **纯前端架构** — HTML5 原生界面，无 React/Vue 框架
+- **单用户** — 无多用户或协作功能
+
+---
+
+## 路线图
+
+| 状态 | 功能 |
+|:----:|------|
+| ✅ | 项目管理、AI 分析、世界树、角色池、节奏控制台 |
+| ✅ | 写作台（流式生成 + 上下文注入 + 定稿） |
+| ✅ | 审查室（S1 机械闸 + S2 三审 + 夹逼投票 + 质量门禁 + 修订循环） |
+| ✅ | API Key 加密、双语言切换、磁盘持久化 |
+| 🔜 | S0 输入闸、连续性引擎增强、写作技能学习器 |
+| 🔜 | Docker 部署、macOS/Linux 启动脚本 |
+
+---
+
+## 常见问题
+
+**Q: API Key 安全吗？**
+A: Key 使用 XOR + Base64 加密 + 机器指纹绑定存储，不会明文暴露。
+
+**Q: 分析需要多长时间？**
+A: 取决于小说长度，通常 5 章约 2-5 分钟。分析过程中请勿刷新页面。
+
+**Q: 数据存在哪里？**
+A: 全部数据在 `projects/{项目名}/` 文件夹中，纯文件存储，可随时备份。
+
+**Q: 刷新页面数据会丢失吗？**
+A: 不会。所有数据即时写入磁盘，刷新/重启自动恢复。
+
+---
+
+# 🇬🇧 English
+
+## Overview
+
+**Art Super Writer** is an AI-assisted novel writing system that simulates a **complete editorial workflow**:
+
+| Role | Responsibility |
+|------|---------------|
+| 🧠 **AI Analyst** | 8-step multi-turn deep reading — extracts plot structure, character profiles, pacing data |
+| ✍️ **AI Writing Assistant** | Injects world tree / character pool / rhythm data as context for writing the next chapter |
+| 🔍 **AI Reviewer** | Three reviewers (Strict / Balanced / Lenient) in parallel + Squeeze Theorem voting + Quality Gate |
+| 📊 **AI Reader** | Provides feedback from a real reader's perspective — page-turner scores, burning questions |
+
+> 🎯 **Target Audience**: Novelists, web fiction authors, anyone who wants to leverage AI for better writing.
+
+---
+
+## Features (All Completed ✅)
+
+| Module | Features |
+|--------|----------|
+| 📁 **Project Management** | Create / lock / delete projects, import `.md` / `.txt` files |
+| 🧠 **AI Reader Analysis** | 8-step multi-turn: chapter reading → structure → characters → rhythm → unified JSON |
+| ✍️ **Writing Studio** | Context injection, streaming LLM generation, save drafts, finalize chapters |
+| 🔍 **Review Chamber** | S1 Gate (19 regex + continuity engine) → S2 Three Reviewers → Squeeze voting → Quality Gate → Revision loop |
+| 🌳 **World Tree** | 4D visualization: Trunk / Branches / Buds (foreshadowing) / Roots (world-building) |
+| 🧠 **Character Pool** | Hexagon radar chart, collapsible cards, add/edit/delete characters, custom AI analysis |
+| 📊 **Tension Console** | Per-chapter reading metrics, top reader questions, pacing assessment, continuity dashboard |
+| 🔐 **API Key Security** | XOR + Base64 encryption with machine fingerprint binding |
+| 🌐 **Bilingual UI** | Chinese / English one-click switch |
+| 💾 **Local Persistence** | All data written to disk immediately |
+| 📋 **History Log** | Analysis logs + operation logs with timeline |
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- **Python 3.10+** ([Download](https://python.org/downloads))
+- **DeepSeek API Key** ([Get one](https://platform.deepseek.com/))
+
+### Installation
+
+```bash
+git clone https://github.com/Rambolv/Art-Super-Writer.git
+cd Art-Super-Writer/standalone
+python -m venv .venv
+.venv\Scripts\activate
+python launcher.py
+```
+
+Open `http://127.0.0.1:8899` in your browser.
+
+> 💡 Windows users can also double-click `start_server.bat`.
+
+---
+
+## Complete Usage Flow
+
+### Step 1: Configure API Key
+
+1. Click ⚙️ Settings in the left navigation
+2. Select **DeepSeek** under LLM Provider
+3. Enter your API Key, click 🔑 Save Key
+4. Click 🔌 Test Connection to verify
+
+### Step 2: Create / Import Project
+
+1. Click 📁 Project Management
+2. Right panel → 🆕 Create New Project → enter name, premise, genre → click ✨ Create
+3. Or click 📥 Import → select your existing `.md` or `.txt` chapter files → 📥 Import
+
+### Step 3: Lock Project
+
+1. Find your project in the project list
+2. Click the 🔒 Lock button
+3. Once locked, all modules operate on this project
+
+### Step 4: AI Analysis
+
+1. Click 🧠 Character Pool (or any analysis-related page)
+2. Click 🔄 Re-Analyze button
+3. AI performs an **8-step multi-turn dialogue**:
+   - Round 1: Chapter-by-chapter reading experience
+   - Round 2: Story structure extraction (main plot / subplots / foreshadowing / world-building)
+   - Round 3: Character impression analysis
+   - Round 4: Rhythm and pacing assessment
+   - Step 5: Unified JSON data generation
+
+> ⚠️ Do not refresh the page during analysis. Data is auto-saved to disk upon completion.
+
+### Step 5: Explore Analysis Results
+
+- **🌳 World Tree** — Main plot milestones, subplot status, unresolved foreshadowing (by urgency)
+- **🧠 Character Pool** — Each character: role, traits, decision style, cares/fears, relationships, consistency warnings
+- **📊 Tension Console** — Per-chapter page-turner scores, emotion curves, top reader questions
+
+### Step 6: AI-Assisted Writing
+
+1. Click ✍️ Writing Studio
+2. Left panel — writing form:
+   - **Direction**: Describe what you want to write in this chapter
+   - **Temperature**: Higher = more creative, Lower = more consistent
+   - **Word Target**: Set target word count
+3. Click ✍️ Start Writing — AI generates content with **streaming** (real-time display)
+4. After generation:
+   - 💾 Save Draft → saves to `drafts/` folder
+   - 📝 Finalize to Chapter → writes to `chapters/` folder
+   - 📊 Analyze Chapter → independent chapter analysis
+
+> 💡 The AI Writer automatically receives: world tree data, character profiles, rhythm data, and writing advice — ensuring consistency.
+
+### Step 7: Review & Revise
+
+1. Click 🔍 Review Chamber
+2. Select chapter → Click 🔍 Review
+3. The review pipeline runs automatically:
+
+```
+⚙️ S1 Mechanical Gate (19 regex rules + Continuity Engine)
+   ├── Punctuation: half-width mixing, excessive dashes, ellipsis abuse
+   ├── AI-banned: summary phrases, binary contrast, sentence fillers, rhetorical questions
+   ├── Structure: paragraph length uniformity, sentence monotony
+   └── Continuity: absent characters, stalled subplots, overdue foreshadowing, dead character activity
+        ↓
+🔴 S2 Strict Reviewer  (temp 0.3, rigorous)
+🟡 S2 Balanced Reviewer (temp 0.3, comprehensive)
+🟢 S2 Lenient Reviewer  (temp 0.4, highlights strengths)
+        ↓
+🗳️ Squeeze Theorem Voting (median of 3 reviews + 13-dimension weighting)
+        ↓
+🚪 Quality Gate (PASS ≥75 / REVISE ≥50 / MANUAL <50)
+        ↓
+🔄 If revision needed → AI auto-revise → re-review → up to 3 iterations
+```
+
+4. Editor supports **Undo / Redo** (Ctrl+Z / Ctrl+Y)
+5. Click suggestion cards to **auto-locate and apply changes**
+
+### Step 8: Finalize & Manage
+
+- After passing review, click ✅ Approved in the editor
+- In Project Management, view stats: chapter count, character count, total words, average score
+- Click 💾 Export to Disk to persist all data
+
+### Daily Workflow Loop
+
+```
+✍️ Write → 🔍 Review → 🔄 Revise → ✅ Finalize
+   ↑                              ↓
+   └── Analysis feedback injection ←──┘
+```
+
+After each new chapter, re-run AI analysis to update world tree and character data.
+
+---
+
+## Project Structure
+
+```
+standalone/
+├── index.html              # Main app (~5300 lines)
+├── server.py               # Python HTTP API server (port 8899)
+├── launcher.py             # One-click launcher
+├── start_server.bat        # Server-only startup
+│
+├── projects/               # All novel project data
+│   └── {project_name}/
+│       ├── chapters/        # Chapter .md files
+│       ├── drafts/          # Writing drafts
+│       ├── reviews/         # Review records (JSON)
+│       ├── characters/      # Individual character JSON
+│       ├── characterProfiles/ # Character profiles / bulk backup
+│       ├── worldTreeData/   # World tree JSON
+│       ├── tensionReports/  # Rhythm reports
+│       ├── fuzzyMemory/     # Fuzzy memory
+│       ├── projectLog/      # Analysis logs
 │       ├── skills/          # Writing skill library
-│       │   ├── external/    # External skill rules
-│       │   └── self/        # Self-learned strengths/weaknesses
-│       ├── config/          # Project settings
+│       ├── config/          # Project config
 │       ├── styleMemory/     # Style memory
 │       └── referenceNotes/  # Reference notes
-│
-├── 快速开发文档.md            # Quick dev guide (Chinese)
-├── 设计决策记录.md            # Design decisions (Chinese)
-├── 项目开发记录.md            # Development log (Chinese)
-├── 项目状态.md                # Project status (Chinese)
-├── 会话上下文.md              # Session context (Chinese)
-├── LLM交互流程文档.md         # LLM interaction flow (Chinese)
-└── 历史对话记录.txt           # Chat history
 ```
 
 ---
 
-## Design Philosophy / 设计理念
+## Design Philosophy
 
-### 🇨🇳 核心原则
-
-| # | Principle / 原则 | Description / 说明 |
-|---|-----------------|-------------------|
-| 1 | **LLM 以读者身份分析** | AI is a regular reader who just finished your novel, not a literary critic |
-| 2 | **分析结果回流写作** | World Tree / Character Pool / Rhythm data feeds into Writer prompt |
-| 3 | **一次写好** | Write well in one pass, don't rely on multiple review cycles |
-| 4 | **展示与注入并行** | Show data to user AND inject it into AI writing context simultaneously |
-| 5 | **LLM 自行归类** | LLM outputs structured JSON directly, frontend only saves and displays |
-| 6 | **免心理学框架** | No OCEAN / Dark Triad — readers describe characters naturally |
-| 7 | **世界树 ≠ 模糊记忆** | World Tree = precise structure (lossless); Fuzzy Memory = fallback compression (lossy) |
-
-### 🇬🇧 Core Principles
-
-1. **LLM as a Reader** — AI roleplays a regular reader who just finished the novel
-2. **Analysis Feeds Writing** — All analysis results are injected into the Writer's prompt
-3. **Write Well Once** — Aim for quality in a single pass, not iterative fixes
-4. **Show & Inject** — Display insights to the user AND feed them to the AI simultaneously
-5. **LLM Self-Classification** — LLM outputs structured JSON directly; frontend is pure display
-6. **Psychology-Free** — No mandatory OCEAN/Dark Triad frameworks; natural descriptions suffice
-7. **World Tree ≠ Fuzzy Memory** — World Tree is precise (lossless); Fuzzy Memory is compression (lossy)
+| # | Principle | Description |
+|---|-----------|-------------|
+| 1 | **LLM as Reader** | AI roleplays a regular reader, not a literary critic |
+| 2 | **Analysis Feeds Writing** | World tree / character / rhythm data auto-injected into Writer context |
+| 3 | **Write Well Once** | Aim for quality in a single pass |
+| 4 | **Show & Inject** | Display insights AND feed them to AI simultaneously |
+| 5 | **LLM Self-Classification** | LLM outputs structured JSON; frontend only stores and displays |
+| 6 | **No Mandatory Psychology** | No OCEAN / Dark Triad; natural descriptions suffice |
+| 7 | **World Tree ≠ Fuzzy Memory** | World Tree = lossless; Fuzzy Memory = lossy compression |
+| 8 | **Squeeze Theorem Voting** | Median of 3 reviews eliminates extremes, mathematically stable |
 
 ---
 
-## Pros & Cons / 优劣势分析
+## Configuration
 
-### ✅ Advantages / 优势
+### Quality Gate Thresholds
 
-| # | Advantage / 优势 | Detail / 说明 |
-|---|-----------------|---------------|
-| 1 | **Zero setup** / 零配置 | Just a browser + Python, no npm/node/database needed |
-| 2 | **Single HTML file** / 单文件 | Entire frontend is one file (~2000 lines) — easy to understand and modify |
-| 3 | **Deep analysis** / 深度分析 | 8-step multi-turn dialogue extracts rich story insights |
-| 4 | **Reader perspective** / 读者视角 | AI judges like a real reader, not a machine |
-| 5 | **Encrypted API keys** / 加密密钥 | XOR+Base64 + machine fingerprint — safe from leaks |
-| 6 | **Disk persistence** / 磁盘持久化 | Every operation writes to disk immediately — no data loss |
-| 7 | **Bilingual UI** / 双语界面 | Chinese/English switchable with one click |
-
-### ❌ Limitations / 局限性
-
-| # | Limitation / 局限 | Detail / 说明 |
-|---|------------------|---------------|
-| 1 | **Requires API Key** / 需 API Key | Must have DeepSeek or compatible LLM API key |
-| 2 | **No offline mode** / 无离线模式 | AI features require internet connection |
-| 3 | **Writing Studio WIP** / 写作台未完成 | Core writer module is placeholder (planned) |
-| 4 | **Review Chamber WIP** / 审查室未完成 | 3-reviewer pipeline is placeholder (planned) |
-| 5 | **Basic UI** / 基础界面 | HTML5-only UI, no React/Vue, less polished than framework-based apps |
-| 6 | **Single-user** / 单用户 | No multi-user or collaboration features |
-| 7 | **Windows batch script** / 仅 Windows 启动脚本 | `start_server.bat` is Windows-only (but `server.py` works cross-platform) |
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Pass Threshold | 75 | Score ≥ this → PASS |
+| Revise Threshold | 50 | Score ≥ this → auto-revise |
+| Max Iterations | 3 | Max revision cycles |
+| Strict Min Dimension | 5 | Any dimension below → MANUAL |
 
 ---
 
-## Configuration / 配置说明
+## Pros & Cons
 
-### LLM Providers / LLM 供应商
+### ✅ Advantages
 
-| Provider / 供应商 | Env Variable / 环境变量 | Default Model / 默认模型 |
-|-------------------|------------------------|--------------------------|
-| [DeepSeek](https://platform.deepseek.com/) | `DEEPSEEK_API_KEY` | `deepseek-v4-flash` |
-| [OpenAI](https://platform.openai.com/) | `OPENAI_API_KEY` | `gpt-4o` |
-| Custom / 自定义 | `CUSTOM_API_KEY` | Custom URL |
+- **Zero setup** — Browser + Python only
+- **Single-file** — Entire frontend in one HTML file
+- **Deep analysis** — 8-step multi-turn dialogue
+- **Reader perspective** — AI judges as a real reader
+- **Squeeze review** — Three reviewers + mathematical voting
+- **Encrypted keys** — XOR+Base64 + machine fingerprint
 
-### Quality Gate Defaults / 质量门禁默认值
+### ❌ Limitations
 
-| Parameter / 参数 | Default / 默认值 | Recommended Range / 推荐范围 |
-|------------------|-----------------|------------------------------|
-| Pass Threshold / 通过阈值 | 75 | 70–80 |
-| Revise Threshold / 修订阈值 | 50 | 45–55 |
-| Max Iterations / 最大迭代 | 3 | 3 |
-| Min Dimension Score / 严审最低分 | 5 | 5 |
-
-### 13 Review Dimensions / 13 个审查维度
-
-All default weight: `1.0`
-
-1. Plot / 情节
-2. Characters / 角色
-3. Dialogue / 对话
-4. Pacing / 节奏
-5. Writing Style / 文风
-6. Consistency / 一致性
-7. Emotional Impact / 情感冲击
-8. Originality / 原创性
-9. Readability / 可读性
-10. AI-tone Detection / AI 味检测
-11. Character Psychology / 角色心理
-12. Social Interaction / 社会互动
-13. Exceptional Authenticity / 例外真实性
+- **Requires API Key** — DeepSeek or compatible LLM API key needed
+- **Internet-dependent** — AI features require network
+- **Vanilla frontend** — HTML5 native UI, no framework
+- **Single-user** — No collaboration features
 
 ---
 
-## Data Flow / 数据流程
+## Roadmap
 
-```
-User Inputs Chapter
-        ↓
-┌─────────────────────────────────────────────────┐
-│            AI Reader Analysis (8 steps)          │
-│                                                   │
-│  Step 1: Probe model capacity (context limit)     │
-│  Step 2: Batch read (split by token budget)       │
-│  Step 3: Reading experience (appeal, emotion)     │
-│  Step 4: Story structure (plot, subplots, etc.)   │
-│  Step 5: Character impressions (all characters)   │
-│  Step 6: Overall feeling (pacing, expectations)   │
-│  Step 7: Skill evaluation (editor perspective)    │
-│  Step 8: Output structured JSON                   │
-└───────────────────────┬─────────────────────────┘
-                        ↓
-┌───────────────────────────────────────────────────────┐
-│                   Analysis Results                     │
-├─────────────────┬─────────────────┬───────────────────┤
-│   🌳 World Tree  │  🧠 Character    │  📊 Tension       │
-│   (plot struct)  │  Pool (profiles) │  Console (rhythm) │
-├─────────────────┼─────────────────┼───────────────────┤
-│   Trunk         │  Role tags       │  Per-chapter      │
-│   Branches      │  Traits/Models   │  appeal scores    │
-│   Buds          │  Relationships   │  Reader questions │
-│   Roots         │  Consistency     │  Pacing guidance  │
-└─────────────────┴─────────────────┴───────────────────┘
-        ↓                        ↓
-  Display to User        Inject into Writer Prompt
-```
-
-### Fuzzy Memory / 模糊记忆机制
-
-When total tokens exceed **55K**, old chapters are automatically compressed to L3 (400-word summaries), keeping the latest **5 chapters** intact. This prevents AI context overflow while preserving critical recent context.
-
-```
-Token Budget Decision:
-  Total ≤ 55K → Send full text
-  Total > 55K → Compress old chapters (L3, ~400 words)
-               + Keep last 5 chapters intact
-```
-
-### Review Chamber Data Flow / 审查室数据流
-
-```mermaid
-flowchart TB
-    subgraph 输入
-        A1["📄 章节正文"] --> B1["🔍 S1机械闸"]
-        A2["⚙️ anti_slop_rules"] --> B1
-        A1 --> B2["🔴 严审官"]
-        A1 --> B3["🟡 衡审官"]
-        A1 --> B4["🟢 宽审官"]
-        A3["📐 review_dimensions"] --> B2 & B3 & B4
-    end
-    subgraph 处理
-        B1 --> B5["📮 选票汇总"]
-        B2 & B3 & B4 --> B5
-        B5 --> B6["🔬 夹逼优选"]
-        B6 --> B7["🗳️ 投票确认"]
-        B7 --> B8["🚪 质量门禁"]
-    end
-    subgraph 输出
-        B8 --> C1["✅ 通过/修订/人工"]
-        B1 & B2 & B3 & B4 --> C3["💾 reviews/审查记录.json"]
-    end
-    subgraph 存储
-        D1["📄 chapters/ 正式章节"]
-        D2["📝 drafts/ 修改草稿 v1/v2/..."]
-        D3["📚 projectLog/ 版本历史"]
-    end
-    C3 --> D1 & D2 & D3
-```
-
-See [审查室数据流图.md](./审查室数据流图.md) for the complete data flow documentation with file paths, config sources, and function call chains.
+| Status | Feature |
+|:------:|---------|
+| ✅ | Project management, AI analysis, World Tree, Character Pool, Tension Console |
+| ✅ | Writing Studio (streaming + context injection + finalization) |
+| ✅ | Review Chamber (S1 gate + S2 reviewers + squeeze voting + quality gate + revision loop) |
+| ✅ | API Key encryption, bilingual UI, disk persistence |
+| 🔜 | S0 input gate, enhanced continuity engine, writing skill learner |
+| 🔜 | Docker deployment, macOS/Linux launcher scripts |
 
 ---
 
-## Roadmap / 开发路线图
+## FAQ
 
-### ✅ Completed / 已完成 (v1.0)
+**Q: Is my API Key secure?**
+A: Keys stored with XOR + Base64 encryption + machine fingerprint — never plaintext.
 
-- [x] Project management (create/select/lock/delete/import)
-- [x] Settings panel (LLM provider, API Key, quality gate)
-- [x] API Key encryption + dual-mode management
-- [x] AI Reader analysis (8-step multi-turn dialogue)
-- [x] Fuzzy memory downgrade (auto-compress when >55K tokens)
-- [x] World Tree visualization page
-- [x] Tension Console visualization page
-- [x] Character Pool visualization page
-- [x] Settings export/import
-- [x] Language switching (CN/EN)
+**Q: How long does analysis take?**
+A: Typically 2-5 minutes for 5 chapters. Do not refresh during analysis.
 
-### 🔄 In Progress / 开发中 (v1.1)
+**Q: Where is data stored?**
+A: All data in `projects/{project_name}/` folder — backup anytime.
 
-- [ ] Writing Studio — inject context from all analysis modules
-- [ ] Review Chamber — S1 regex + S2 three reviewers + voting
-
-### 📅 Planned / 计划中 (v1.2+)
-
-- [ ] History Log — project operation timeline
-- [ ] Batch analysis for multiple projects
-- [ ] Full fuzzy memory pipeline (L0 → L4 compression)
-- [ ] Custom reviewer prompts
-- [ ] Export to publishing formats (PDF, EPUB)
+**Q: Will data be lost on refresh?**
+A: No. All data written to disk immediately, auto-restored on refresh.
 
 ---
 
-## Troubleshooting / 常见问题
+## 📄 License
 
-### ❓ FAQ / 常见问题
-
-**Q: What do I need to run this? / 运行需要什么？**  
-A: Python 3.10+ and a DeepSeek (or OpenAI) API key. No database, no npm, no Docker.
-
-**Q: Is my API key safe? / API 密钥安全吗？**  
-A: Yes. Keys are encrypted with XOR + Base64 and bound to your machine's hardware fingerprint. Never sent anywhere except to the LLM provider.
-
-**Q: Can I use OpenAI instead of DeepSeek? / 可以用 OpenAI 代替 DeepSeek 吗？**  
-A: Yes. Go to Settings → LLM Provider, choose OpenAI, and enter your key.
-
-**Q: How do I update / 怎么更新？**  
-A: Just `git pull`. Your projects and data are stored in the `projects/` folder and won't be overwritten.
-
-**Q: The analysis seems stuck / 分析卡住了怎么办？**  
-A: Check your API key in Settings and click "Test Connection". Ensure your internet is stable. Large novels (>100K tokens) take longer.
-
-### ⚠️ Known Issues / 已知问题
-
-- Analysis depends on a valid API Key saved in `_apiKeysCache`
-- Example projects may contain placeholder content
-- Imported files need re-processing for chapter splitting logic
-
----
-
-## License / 许可证
-
-本项目采用 **MIT License** 开源。
-
-```
-MIT License
-
-Copyright (c) 2026 Rambolv
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-```
+MIT License — see [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for novel writers everywhere**
+**Made with ❤️ for storytellers | 为讲故事的人而做**
 
-[GitHub](https://github.com/Rambolv/Art-Super-Writer) · [Report Bug](https://github.com/Rambolv/Art-Super-Writer/issues) · [Request Feature](https://github.com/Rambolv/Art-Super-Writer/issues)
+[⬆ Back to top / 回到顶部](#-超逸写手--art-super-writer)
 
 </div>
