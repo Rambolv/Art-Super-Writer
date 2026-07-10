@@ -1740,6 +1740,9 @@ async function analyzeProject(name){
     // 节奏
     if(data.rhythm){p.rhythm=data.rhythm;p.tensions=(data.rhythm.per_chapter||[]).map(c=>({chapter:c.chapter,level:((c.page_turner||5)+(c.emotion||5))/2,phase:c.role||'未知'}));p.folders.tensionReports['读者节奏报告.md']='# 读者节奏报告\n\n## 逐章数据\n'+(data.rhythm.per_chapter||[]).map(c=>'- 第'+c.chapter+'章: 吸引力'+c.page_turner+'/10 情感'+c.emotion+'/10 作用:'+c.role).join('\n')+'\n\n## 整体\n'+(data.rhythm.overall_pacing||'')+'\n\n## 读者最想知道\n'+(data.rhythm.top_questions||[]).map((q,i)=>(i+1)+'. '+q).join('\n');}
 
+    // ★ 连续性指标（初始计算，供节奏控制台展示）
+    p.continuity = computeContinuityMetrics(p);
+
     // 备忘录 & 技能
     if(data.memo) p.writerMemo=data.memo;
     if(data.skills){p.skills=data.skills;p.folders.skills=p.folders.skills||{external:[],self:[]};const sk=[];(data.skills.strengths||[]).forEach(s=>{sk.push('## 优点: '+s.aspect+'\n\n示例: '+(s.examples||'')+'\n\n'+(s.detail||''));});(data.skills.weaknesses||[]).forEach(w=>{sk.push('## 不足: '+w.aspect+'\n\n示例: '+(w.examples||'')+'\n\n'+(w.detail||'')+'\n\n改进建议: '+(w.improvement||''));});if(data.skills.overall_advice) sk.push('## 综合建议\n\n'+data.skills.overall_advice);p.folders.skills.self=sk;}else{
@@ -2175,6 +2178,8 @@ renderers.tension = function(){
   const tensions = p?.tensions||[];
   const hasData = rhythm && rhythm.per_chapter?.length;
   const name = T('tension');
+  // 连续性指标（可能在分析时已计算，也可能尚未）
+  const cm = p?.continuity || (hasData ? computeContinuityMetrics(p) : null);
 
   if(!hasData){
     main.innerHTML = `<div class="page-title">${name}</div><div class="empty-state"><p>暂无节奏数据</p><p style="font-size:12px;color:var(--text-dim);margin-top:8px">请在项目管理中对项目执行「分析」后查看</p></div>`;
@@ -2256,7 +2261,62 @@ renderers.tension = function(){
         ⚡ 关键规则: 连续上升不超过5章 | 高潮后至少2章恢复期 | 张力永不降至1.0以下
       </div>
     </div>
-  </div>`;
+  </div>
+
+  <!-- ═══ 故事连续性仪表盘 ═══ -->
+  <div class="card" style="margin-top:12px">
+    <div class="card-title">📊 故事健康度 <span style="font-size:11px;color:var(--text-dim);font-weight:400">(连续性监控)</span></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+      <div style="text-align:center;padding:6px 14px;background:rgba(0,212,255,.08);border-radius:8px;flex:1">
+        <div style="font-size:9px;color:var(--text-dim)">健康分</div>
+        <div style="font-size:22px;font-weight:700;color:${(cm?.healthScore||100)>=80?'var(--green)':(cm?.healthScore||100)>=50?'var(--orange)':'var(--accent)'}">${cm?.healthScore||100}</div>
+        <div style="font-size:9px;color:var(--text-dim)">/ 100</div>
+      </div>
+      <div style="text-align:center;padding:6px 14px;background:rgba(46,213,115,.08);border-radius:8px;flex:1">
+        <div style="font-size:9px;color:var(--text-dim)">角色活跃</div>
+        <div style="font-size:20px;font-weight:700;color:var(--green)">${cm?.characterHealth.active||0}</div>
+        <div style="font-size:9px;color:var(--text-dim)">/ ${cm?.characterHealth.total||0}</div>
+      </div>
+      <div style="text-align:center;padding:6px 14px;background:rgba(255,159,67,.08);border-radius:8px;flex:1">
+        <div style="font-size:9px;color:var(--text-dim)">情节线停滞</div>
+        <div style="font-size:20px;font-weight:700;color:${(cm?.threadHealth?.stalled||0)>0?'var(--orange)':'var(--text-dim)'}">${cm?.threadHealth?.stalled||0}</div>
+        <div style="font-size:9px;color:var(--text-dim)">/ ${cm?.threadHealth?.total||0}</div>
+      </div>
+      <div style="text-align:center;padding:6px 14px;background:rgba(233,96,96,.08);border-radius:8px;flex:1">
+        <div style="font-size:9px;color:var(--text-dim)">伏笔超期</div>
+        <div style="font-size:20px;font-weight:700;color:${(cm?.foreshadowingHealth?.overdue||0)>0?'var(--accent)':'var(--text-dim)'}">${cm?.foreshadowingHealth?.overdue||0}</div>
+        <div style="font-size:9px;color:var(--text-dim)">/ ${cm?.foreshadowingHealth?.total||0}</div>
+      </div>
+    </div>`;
+
+  // 详细问题列表
+  const allIssues = [];
+  (cm?.characterHealth?.items||[]).filter(i=>i.status!=='active').forEach(i=>{
+    allIssues.push({type:'角色', name:i.name, status:i.status, detail:i.detail, severity:i.status==='never_appeared'?'CRITICAL':'WARNING'});
+  });
+  (cm?.threadHealth?.items||[]).filter(i=>i.status==='stalled').forEach(i=>{
+    allIssues.push({type:'情节线', name:i.name, status:i.status, detail:i.detail, severity:'WARNING'});
+  });
+  (cm?.foreshadowingHealth?.items||[]).filter(i=>i.status==='overdue').forEach(i=>{
+    allIssues.push({type:'伏笔', name:i.foreshadow, status:i.status, detail:i.detail, severity:'WARNING'});
+  });
+
+  if(allIssues.length){
+    html += `<details open><summary style="cursor:pointer;font-size:11px;color:var(--text-dim)">⚠️ ${allIssues.length}个待处理问题</summary><div style="margin-top:4px">`;
+    allIssues.forEach(issue=>{
+      const sevIcon=issue.severity==='CRITICAL'?'🔴':'⚠️';
+      const sevColor=issue.severity==='CRITICAL'?'var(--accent)':'var(--orange)';
+      html += `<div style="padding:3px 0;font-size:10px;border-bottom:1px solid rgba(255,255,255,.03)">
+        <span style="color:${sevColor}">${sevIcon} [${issue.type}] ${issue.name||''}</span>
+        <span style="color:var(--text-dim)"> — ${issue.detail||''}</span>
+      </div>`;
+    });
+    html += `</div></details>`;
+  } else {
+    html += `<div style="font-size:11px;color:var(--green);padding:4px 0">✅ 故事状态健康，无待处理问题</div>`;
+  }
+
+  html += `</div>`;
 
   main.innerHTML = html;
   side.innerHTML = `<div class="card"><div class="card-title">📖 ${locked.name}</div>
@@ -2265,6 +2325,11 @@ renderers.tension = function(){
       <div>🎯 节奏: ${rhythm.overall_pacing||'未知'}</div>
       <div>📈 趋势: ${trend}</div>
       <div>💡 读者想知道: ${(rhythm.top_questions||[]).length}件事</div>
+      <hr class="sep" style="margin:6px 0">
+      <div>📊 健康分: <strong style="color:${(cm?.healthScore||100)>=80?'var(--green)':(cm?.healthScore||100)>=50?'var(--orange)':'var(--accent)'}">${cm?.healthScore||100}</strong></div>
+      <div style="font-size:11px">👤 角色: ${cm?.characterHealth?.active||0}活跃 / ${(cm?.characterHealth?.absent||0)+(cm?.characterHealth?.neverAppeared||0)}问题</div>
+      <div style="font-size:11px">🌿 情节: ${cm?.threadHealth?.stalled||0}条停滞</div>
+      <div style="font-size:11px">🌱 伏笔: ${cm?.foreshadowingHealth?.overdue||0}个超期</div>
     </div>
   </div>`;
 };
@@ -2956,7 +3021,107 @@ function runContinuityEngine(text, p){
   return checks;
 }
 
-// ─── S2审查官：调用LLM评分（基于 review_dimensions.yaml 完整子项） ───
+// ─── 连续性指标计算（供分析时初始化和节奏控制台展示） ───
+function computeContinuityMetrics(p){
+  const allChapters = p.chapters||[];
+  const chCount = allChapters.length;
+  const lastChNum = chCount > 0 ? allChapters[allChapters.length-1].number : 0;
+  const charNames = new Set();
+  Object.values(p.characters||{}).forEach(c=>{if(c.name) charNames.add(c.name);});
+  Object.entries(p.readerData?.characters||{}).forEach(([n])=>{charNames.add(n);});
+
+  const metrics = {
+    characterHealth: {total:0, active:0, absent:0, neverAppeared:0, items:[]},
+    threadHealth: {total:0, active:0, stalled:0, resolved:0, items:[]},
+    foreshadowingHealth: {total:0, pending:0, overdue:0, resolved:0, items:[]},
+    pacingHealth: {chapterCount:chCount, avgChLength:0, anomalyChapters:[]},
+    healthScore: 100, // 0-100，越高越健康
+  };
+
+  if(!chCount) return metrics;
+
+  // 平均章节长度
+  const avgLen = allChapters.reduce((s,c)=>s+(c.content?.length||0),0)/chCount;
+  metrics.pacingHealth.avgChLength = Math.round(avgLen);
+
+  // 角色健康度
+  charNames.forEach(name=>{
+    metrics.characterHealth.total++;
+    let role='', lastSeen=0, everAppeared=false;
+    Object.values(p.characters||{}).forEach(c=>{if(c.name===name) role=c.role||'';});
+    Object.entries(p.readerData?.characters||{}).forEach(([n,info])=>{if(n===name) role=info.role||'';});
+
+    for(const ch of allChapters){
+      if(ch.content && ch.content.includes(name)){
+        everAppeared = true;
+        lastSeen = ch.number;
+      }
+    }
+    if(!everAppeared){
+      metrics.characterHealth.neverAppeared++;
+      metrics.characterHealth.items.push({name, role, status:'never_appeared', detail:'从未在正文出现'});
+    } else {
+      const absent = lastChNum - lastSeen;
+      if(absent >= 5){
+        metrics.characterHealth.absent++;
+        metrics.characterHealth.items.push({name, role, status:'absent', detail:`已${absent}章未出现`, lastSeen});
+      } else {
+        metrics.characterHealth.active++;
+        metrics.characterHealth.items.push({name, role, status:'active', detail:`最近出现于第${lastSeen}章`});
+      }
+    }
+  });
+
+  // 情节线健康度
+  const branches = p.worldTree?.branches||p.readerData?.plot_structure?.branches||[];
+  branches.forEach(b=>{
+    metrics.threadHealth.total++;
+    const startCh = b.start_chapter||b.chapter||1;
+    const inactive = lastChNum - startCh;
+    if(b.status==='resolved'||b.status==='已完结'){
+      metrics.threadHealth.resolved++;
+      metrics.threadHealth.items.push({name:b.name||'未知', status:'resolved', detail:'已完结'});
+    } else if(inactive >= 3){
+      metrics.threadHealth.stalled++;
+      metrics.threadHealth.items.push({name:b.name||'未知', status:'stalled', detail:`${inactive}章未推进`, startCh});
+    } else {
+      metrics.threadHealth.active++;
+      metrics.threadHealth.items.push({name:b.name||'未知', status:'active', detail:`推进中`});
+    }
+  });
+
+  // 伏笔健康度
+  const buds = p.worldTree?.buds||p.readerData?.plot_structure?.buds||[];
+  buds.forEach(b=>{
+    metrics.foreshadowingHealth.total++;
+    const plantCh = b.chapter||b.planted||1;
+    const age = lastChNum - plantCh;
+    if(b.urgency==='已回收'||b.status==='resolved'){
+      metrics.foreshadowingHealth.resolved++;
+      metrics.foreshadowingHealth.items.push({foreshadow:(b.foreshadow||b.title||'').substring(0,30), status:'resolved'});
+    } else {
+      metrics.foreshadowingHealth.pending++;
+      if(age >= 10){
+        metrics.foreshadowingHealth.overdue++;
+        metrics.foreshadowingHealth.items.push({foreshadow:(b.foreshadow||b.title||'').substring(0,30), status:'overdue', detail:`${age}章未回收`, plantCh});
+      } else {
+        metrics.foreshadowingHealth.items.push({foreshadow:(b.foreshadow||b.title||'').substring(0,30), status:'pending', detail:`${age}章前埋设`});
+      }
+    }
+  });
+
+  // 综合健康分
+  const charScore = metrics.characterHealth.total > 0
+    ? (metrics.characterHealth.active / metrics.characterHealth.total) * 30 : 30;
+  const threadScore = metrics.threadHealth.total > 0
+    ? ((metrics.threadHealth.active + metrics.threadHealth.resolved) / metrics.threadHealth.total) * 30 : 30;
+  const foreshadowScore = metrics.foreshadowingHealth.total > 0
+    ? (1 - metrics.foreshadowingHealth.overdue / Math.max(metrics.foreshadowingHealth.total,1)) * 30 : 30;
+  const pacingScore = metrics.pacingHealth.anomalyChapters.length === 0 ? 10 : 5;
+  metrics.healthScore = Math.round(charScore + threadScore + foreshadowScore + pacingScore);
+
+  return metrics;
+}
 const DIM_SUB_CHECKS = {
   plot: '情节逻辑是否自洽；因果关系是否清晰；情节推进是否有驱动力；是否存在情节漏洞；子情节是否与主线关联；转折是否合理（非巧合驱动）',
   character: '角色行为是否符合人设；角色动机是否清晰；角色是否有独立的"声音"；角色成长弧线是否可见；配角是否有存在价值；角色关系是否有张力',
@@ -3129,10 +3294,12 @@ async function startReview(projectName, chNum){
   p._reviewStep = 0;
   renderers.review();
 
-  // ═══ Step 1: S1 机械闸 ═══
+  // ═══ Step 1: S1 机械闸 + 连续性更新 ═══
   p._reviewStep = 1; renderers.review();
   const s1Results = runS1Gate(content, p);
   const s1Flagged = s1Results.filter(r=>r.flagged);
+  // 更新连续性指标（供节奏控制台展示）
+  p.continuity = computeContinuityMetrics(p);
   logAnalysis('S1','S1机械闸扫描', s1Flagged.length?s1Flagged.map(r=>r.rule).join(', '):'✅全部通过');
 
   // ═══ Step 2-4: S2 三审查官 ═══
