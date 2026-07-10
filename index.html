@@ -2630,7 +2630,7 @@ renderers.review = function(){
           <span style="color:var(--text-dim);font-size:10px">${(s.proposed_change||'').substring(0,30)}${(s.proposed_change||'').length>30?'...':''}</span>
         </summary>
         <div style="margin-top:3px;font-size:11px;line-height:1.5">
-          ${s.current_text?`<div style="background:rgba(233,96,96,.08);padding:3px 5px;border-radius:2px;margin:2px 0;font-size:10px"><span style="color:var(--accent)">原文:</span> ${s.current_text}</div>`:''}
+          ${s.current_text?`<div style="background:rgba(233,96,96,.08);padding:3px 5px;border-radius:2px;margin:2px 0;font-size:10px;cursor:pointer" onclick="scrollEditorToText('${s.current_text.replace(/'/g,"\\'").substring(0,80)}')" title="点击跳转到原文位置"><span style="color:var(--accent)">📍 原文:</span> ${s.current_text}</div>`:''}
           ${s.proposed_change?`<div style="background:rgba(46,213,115,.08);padding:3px 5px;border-radius:2px;margin:2px 0;font-size:10px"><span style="color:var(--green)">修改:</span> ${s.proposed_change}</div>`:''}
           ${s.reasoning?`<div style="font-size:10px;color:var(--text-dim);margin:2px 0">💡 ${s.reasoning}</div>`:''}
           ${alreadyApplied?'<span style="color:var(--green);font-size:10px">✅ 已应用</span>'
@@ -2914,6 +2914,32 @@ async function approveChapter(chNum){
   renderers.review();
 }
 
+// ─── 编辑器滚动到指定文本位置 ───
+function scrollEditorToText(text){
+  const editor = document.getElementById('reviewEditor');
+  if(!editor || !text) return;
+  const content = editor.value;
+  const idx = content.indexOf(text);
+  if(idx < 0){
+    toast('⚠️ 在编辑器中未找到此原文','warn');
+    return;
+  }
+  // 计算滚动位置：取光标前的文本行数
+  const beforeText = content.substring(0, idx);
+  const lineNum = beforeText.split('\n').length;
+  // 估算 scrollTop：每行约 22px（根据 font-size:13px + line-height:1.7）
+  const lineHeight = 22;
+  const targetScroll = Math.max(0, (lineNum - 5)) * lineHeight;
+  editor.focus();
+  editor.scrollTop = targetScroll;
+  // 选中匹配文本
+  editor.setSelectionRange(idx, idx + text.length);
+  // 高亮动画（通过临时边框）
+  editor.style.transition = 'box-shadow 0.3s';
+  editor.style.boxShadow = '0 0 0 2px var(--cyan)';
+  setTimeout(()=>{ editor.style.boxShadow = 'none'; }, 1500);
+}
+
 // ─── 应用单条建议（实时替换编辑器内容） ───
 function applyReviewSuggestion(chNum, sugIndex){
   const locked=getLockedProject(); if(!locked){toast('请先锁定项目','error');return}
@@ -2927,6 +2953,9 @@ function applyReviewSuggestion(chNum, sugIndex){
   const proposed = sug.proposed_change || sug.description || '';
   const original = sug.current_text || '';
   let content = editor.value || '';
+
+  // ★ 先滚动到原文位置（高亮显示）
+  if(original) scrollEditorToText(original);
 
   if(original && content.includes(original)){
     // 替换原文中的匹配文本（只替换第一个匹配）
