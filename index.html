@@ -3089,7 +3089,6 @@ async function startReview(projectName, chNum){
         candidateB: squeezeResult.runnerUp.suggestion,
       });
       const jm = voteR.match(/\{[\s\S]*\}/);
-      const jm = voteR.match(/\{[\s\S]*\}/);
       if(jm){ const vd=JSON.parse(jm[0]); if(vd.vote_for==='B') finalSuggestion=squeezeResult.runnerUp; squeezeResult.voteResult=vd; }
     } catch(e){}
   }
