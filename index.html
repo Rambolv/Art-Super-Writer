@@ -3418,7 +3418,11 @@ ${dimSubList}
 - 严审必须逐项检查全部子项；衡审检查核心子项；宽审从大局评估
 
 **你必须输出具体的修改建议（suggestions数组），不能为空！**
-每条建议必须包含：原文位置(location)、原文片段(current_text)、修改方案(proposed_change)、理由(reasoning)。
+每条建议是一个**精确替换操作**：
+- current_text = 待替换的原文（必须从章节中完全复制，一个字都不能改）
+- proposed_change = 替换后的新正文（直接替换掉 current_text 的完整内容）
+- marked_text = 在原文中圈出待替换区域（用【【START】】【【END】】标记）
+- 系统会执行：章节内容.replace(current_text, proposed_change)
 
 请输出 JSON 格式（只输出JSON，不要其他文字）：
 {
@@ -3429,9 +3433,10 @@ ${dimSubList}
     {
       "type": "rewrite|polish",
       "location": "原文位置描述（如'第3段第2句'或具体上下文，限15字内）",
-      "current_text": "仅需修改的原文片段（精确复制原文，含标点）",
-      "marked_text": "包含【【START】】和【【END】】标记的原文。把要修改的部分用【【START】】和【【END】】圈出来，前面和后面保留5-10个字作为上下文。例如：「前面几个字【【START】】要修改的原文【【END】】后面几个字」",
-      "proposed_change": "建议修改后的文本",
+      "current_text": "待替换的原文（必须完全复制原文，不能改字，含标点）",
+      "marked_text": "用【【START】】【【END】】圈出待替换部分的原文。例如：「前文【【START】】待替换的原文【【END】】后文」。【【START】】和【【END】】之间的内容必须和 current_text 完全一致。",
+      "proposed_change": "替换后的新正文（直接填入取代 current_text 的完整文本，不是修改意见，是最终要写进小说的内容）",
+      "reasoning": "为什么这样改（一句话）",
       "reasoning": "为什么这样改（一句话）",
       "expected_improvement": {"dimension": "涉及的维度名", "delta": "+N"}
     }
@@ -3441,7 +3446,7 @@ ${dimSubList}
   "improvements": ["改进建议描述"]
 }`;
 
-  const userPrompt = `请审查以下第${chNum}章内容：\n\n${content.substring(0,12000)}\n\n请给出评分和至少2条具体的修改建议（含原文和修改方案）。`;
+  const userPrompt = `请审查以下第${chNum}章内容：\n\n${content.substring(0,12000)}\n\n请给出评分和至少2条具体的修改建议。每条建议必须包含：\n1. current_text — 从本章内容中精确复制的待替换原文\n2. proposed_change — 直接替换上去的新正文（不是修改意见，是最终小说内容）\n3. marked_text — 用【【START】】和【【END】】在原文中圈出待替换区域\n\n系统会执行 content.replace(current_text, proposed_change)，所以 current_text 必须和原文完全一致。`;
 
   try {
     const reply = await callLLM(
