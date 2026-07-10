@@ -1,0 +1,124 @@
+{
+  "trunk": [
+    {
+      "chapter": 1,
+      "event": "陶倩倩与男友林刚在伊兹溜冰馆被黄毛团伙设局围殴",
+      "importance": 10
+    },
+    {
+      "chapter": 1,
+      "event": "陶倩倩被郎峰、泰熊及众地痞轮奸，第一次失身",
+      "importance": 10
+    },
+    {
+      "chapter": 1,
+      "event": "林刚被断手脚，陶倩倩左腿被打断",
+      "importance": 9
+    },
+    {
+      "chapter": 1,
+      "event": "黄毛用警棍对陶倩倩进行性虐待",
+      "importance": 8
+    },
+    {
+      "chapter": 1,
+      "event": "陶倩倩被诊断怀孕、染上性病",
+      "importance": 7
+    },
+    {
+      "chapter": 1,
+      "event": "黄毛用录像带威胁陶倩倩，逼迫她持续受辱并卖处",
+      "importance": 9
+    },
+    {
+      "chapter": 1,
+      "event": "陶倩倩以死抗拒毒品注射",
+      "importance": 8
+    },
+    {
+      "chapter": 1,
+      "event": "黄毛被警方击毙，陶倩倩被郎峰接手",
+      "importance": 9
+    },
+    {
+      "chapter": 1,
+      "event": "郎峰强迫陶倩倩在伊兹跳艳舞，药物失控当众自慰",
+      "importance": 10
+    },
+    {
+      "chapter": 1,
+      "event": "陶倩倩被迫卖淫，服务各种嫖客",
+      "importance": 8
+    },
+    {
+      "chapter": 1,
+      "event": "雪夜街头陶倩倩用卖淫所得擦拭体液，遇到已沦为乞丐的林刚",
+      "importance": 10
+    }
+  ],
+  "branches": [
+    {
+      "name": "金巧燕的公众应对",
+      "start_chapter": 1,
+      "status": "已完结（成名，回避与陶的联系）",
+      "relation": 7
+    },
+    {
+      "name": "林刚的沉沦",
+      "start_chapter": 1,
+      "status": "已完结（沦为乞丐，不再认识陶）",
+      "relation": 10
+    },
+    {
+      "name": "郎峰与边建军、徐局长的腐败网络",
+      "start_chapter": 1,
+      "status": "持续中（郎峰扩张，徐升迁）",
+      "relation": 8
+    },
+    {
+      "name": "嫖客讲述的秘书故事",
+      "start_chapter": 1,
+      "status": "已完结（作为隐喻）",
+      "relation": 6
+    }
+  ],
+  "buds": [
+    {
+      "chapter": 1,
+      "foreshadow": "林刚在街头是否认出了陶倩倩？",
+      "urgency": "最高"
+    },
+    {
+      "chapter": 1,
+      "foreshadow": "陶倩倩的最终结局是否就是秘书故事中的虐杀？",
+      "urgency": "高"
+    },
+    {
+      "chapter": 1,
+      "foreshadow": "郎峰与金巧燕之间是否有联系（娱乐公司强暴案）？",
+      "urgency": "中"
+    },
+    {
+      "chapter": 1,
+      "foreshadow": "那些录影带最终落入谁手？会不会曝光？",
+      "urgency": "中"
+    }
+  ],
+  "roots": [
+    {
+      "chapter": 1,
+      "category": "叙事框架",
+      "content": "以《睡美人》芭蕾舞剧四幕结构（洗礼、巫术、幻境、婚礼）统摄全篇，童话美好与现实残酷形成强烈反讽。"
+    },
+    {
+      "chapter": 1,
+      "category": "世界观特点",
+      "content": "极度写实的都市底层黑暗社会，暴力、色情、毒品、腐败形成闭合网络，法律与道德形同虚设，纯真成为灾祸的诱因。"
+    }
+  ],
+  "metrics": {
+    "pending_buds": 4,
+    "active_branches": 4,
+    "growth_health": 0.6
+  }
+}

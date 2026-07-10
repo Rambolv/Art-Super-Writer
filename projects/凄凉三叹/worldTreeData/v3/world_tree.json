@@ -1,0 +1,109 @@
+{
+  "trunk": [
+    {
+      "chapter": 1,
+      "event": "陶倩倩与林刚在溜冰馆被黄毛设伏，13人轮奸陶倩倩，林刚被打断手脚",
+      "importance": 10
+    },
+    {
+      "chapter": 1,
+      "event": "黄毛持录像带至病房威胁，陶倩倩隐瞒真相，被迫接受反复凌辱",
+      "importance": 9
+    },
+    {
+      "chapter": 1,
+      "event": "陶倩倩做处女膜修复手术，被迫卖处，黄毛以海洛因相逼，陶以死抗拒",
+      "importance": 8
+    },
+    {
+      "chapter": 1,
+      "event": "郎峰接管黄毛的生意，陶倩倩被转手，接受系统性性训练与丰乳要求",
+      "importance": 8
+    },
+    {
+      "chapter": 1,
+      "event": "迪厅艳舞高潮：陶倩倩在药物控制下当众自慰，学生宁馨在场产生怀疑",
+      "importance": 10
+    },
+    {
+      "chapter": 1,
+      "event": "雪夜卖淫后，陶倩倩用嫖资擦拭下体，施舍乞丐时认出林刚，林刚未认出她",
+      "importance": 10
+    }
+  ],
+  "branches": [
+    {
+      "name": "金巧燕的事业线",
+      "start_chapter": 1,
+      "status": "已公开被强暴并转型为娱乐圈明星，获奖出专辑",
+      "relation": 7
+    },
+    {
+      "name": "郎峰与泰熊的同性关系",
+      "start_chapter": 1,
+      "status": "陶倩倩目睹泰熊肛交郎峰，郎峰同时是施暴者与受暴者",
+      "relation": 6
+    },
+    {
+      "name": "宁馨的怀疑暗线",
+      "start_chapter": 1,
+      "status": "已产生怀疑但被同学说服，尚未确认陶老师身份",
+      "relation": 9
+    },
+    {
+      "name": "警察徐队长与边建军的保护伞线",
+      "start_chapter": 1,
+      "status": "徐队长对暴行视而不见，后升任分局局长",
+      "relation": 8
+    }
+  ],
+  "buds": [
+    {
+      "chapter": 1,
+      "foreshadow": "林刚的最终命运——雪地乞丐是否会在某天认出陶倩倩或得知真相",
+      "urgency": "最迫切"
+    },
+    {
+      "chapter": 1,
+      "foreshadow": "黄毛拍摄的强暴录像带下落，郎峰手中的证据可能引爆",
+      "urgency": "次迫切"
+    },
+    {
+      "chapter": 1,
+      "foreshadow": "宁馨是否会最终确认陶老师身份并引发事件",
+      "urgency": "第三迫切"
+    },
+    {
+      "chapter": 1,
+      "foreshadow": "郎峰与泰熊的关系线是否会进一步展开",
+      "urgency": "第四迫切"
+    },
+    {
+      "chapter": 1,
+      "foreshadow": "金巧燕的公开成功背后是否也被控制或有录像带威胁",
+      "urgency": "第五迫切"
+    }
+  ],
+  "roots": [
+    {
+      "chapter": 1,
+      "category": "童话结构映射",
+      "content": "《睡美人》的洗礼、巫术、幻境、婚礼四幕对应陶倩倩的命运转折，但王子之吻被反转"
+    },
+    {
+      "chapter": 1,
+      "category": "意象系统",
+      "content": "红舞鞋、脚链、铁棍穿鞋、胶棒内裤、钢管等意象前后呼应，强化悲剧与物化感"
+    },
+    {
+      "chapter": 1,
+      "category": "系统性压迫",
+      "content": "警方、医生、护士、嫖客、社会舆论共同构成无法逃脱的牢笼，黑道与白道合谋"
+    }
+  ],
+  "metrics": {
+    "pending_buds": 5,
+    "active_branches": 4,
+    "growth_health": 0.6
+  }
+}

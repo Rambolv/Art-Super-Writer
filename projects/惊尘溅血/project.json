@@ -1,0 +1,19 @@
+{
+  "name": "惊尘溅血",
+  "premise": "",
+  "genre": "未知",
+  "createdAt": 1783607905295,
+  "imported": true,
+  "analyzed": true,
+  "analysisCount": 1,
+  "chapters": [
+    {
+      "number": 1,
+      "status": "draft",
+      "wordCount": 0,
+      "created_at": "2026-07-09T15:24:01.807Z"
+    }
+  ],
+  "characters": 36,
+  "config": {}
+}

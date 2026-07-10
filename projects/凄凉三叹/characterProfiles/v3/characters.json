@@ -1,0 +1,621 @@
+{
+  "char_001": {
+    "name": "陶倩倩",
+    "role": "主角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "纯真舞者沦为性商品",
+    "traits": [
+      "纯真",
+      "柔韧性极好",
+      "被动",
+      "隐忍",
+      "内心挣扎"
+    ],
+    "decision_style": "被动回避，在极端恐惧下做出有限反抗",
+    "risk_attitude": "极端保守，倾向维持现状",
+    "cares_about": [
+      "教师身份",
+      "林刚安危",
+      "父母不知真相"
+    ],
+    "fears": [
+      "录像带曝光",
+      "失去教师身份",
+      "被学生认出",
+      "海洛因成瘾"
+    ],
+    "bottom_line": "拒绝辞职当专职妓女，拒绝注射海洛因",
+    "relationships": {
+      "林刚": "前任保护者与恋人",
+      "黄毛": "施暴者与控制者",
+      "郎峰": "后续控制者",
+      "泰熊": "施暴者",
+      "宁馨": "学生",
+      "金巧燕": "同学"
+    },
+    "trust_pattern": "不信任任何人，被迫服从施暴者",
+    "conflict_style": "逃避与妥协，偶尔以死相搏",
+    "consistency_issues": [
+      "以死抗拒海洛因与她一贯的懦弱形成反差，但合理"
+    ],
+    "breaking_point": "若教师身份被彻底剥夺，可能完全崩溃",
+    "behavioral_model": "被暴力与威胁驱动，在恐惧中做出生存决策"
+  },
+  "char_002": {
+    "name": "林刚",
+    "role": "主要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "从硬汉到乞丐的悲剧人物",
+    "traits": [
+      "刚强",
+      "冲动",
+      "护短",
+      "后被暴力摧毁"
+    ],
+    "decision_style": "早期冲动保护，后期屈服求生",
+    "risk_attitude": "早期冒险，后期极端保守",
+    "cares_about": [
+      "陶倩倩（早期）",
+      "自己的存活（后期）"
+    ],
+    "fears": [
+      "被彻底打残"
+    ],
+    "bottom_line": "失去一切底线，最终成为乞丐",
+    "relationships": {
+      "陶倩倩": "恋人，但后期认不出她",
+      "黄毛": "主要冲突对象",
+      "郎峰": "冲突对象"
+    },
+    "trust_pattern": "早期信任陶倩倩，后期丧失一切信任",
+    "conflict_style": "正面对抗→屈服→沉默",
+    "consistency_issues": [
+      "从硬汉到懦夫的转变有清晰心理逻辑，一致"
+    ],
+    "breaking_point": "被连续暴力彻底打碎意志",
+    "behavioral_model": "由力量驱动转向恐惧驱动"
+  },
+  "char_003": {
+    "name": "黄毛",
+    "role": "反派",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "欺软怕硬的小头目",
+    "traits": [
+      "凶狠",
+      "阴险",
+      "欺软怕硬",
+      "病态占有欲"
+    ],
+    "decision_style": "莽撞中带心计，遇强则忍，遇弱则虐",
+    "risk_attitude": "在实力对比明确时冒险，对比悬殊时保守",
+    "cares_about": [
+      "面子",
+      "尊严",
+      "报复林刚"
+    ],
+    "fears": [
+      "郎峰翻脸",
+      "警方缉毒"
+    ],
+    "bottom_line": "无底线",
+    "relationships": {
+      "林刚": "主要冲突",
+      "郎峰": "隐性冲突",
+      "陶倩倩": "控制对象",
+      "手下四小弟": "亲近"
+    },
+    "trust_pattern": "不信任他人，只信自己与暴力",
+    "conflict_style": "正面加害与设局",
+    "consistency_issues": [
+      "一致——始终暴戾贪婪"
+    ],
+    "breaking_point": "面对致命威胁时会暂时妥协",
+    "behavioral_model": "弱肉强食的丛林法则"
+  },
+  "char_004": {
+    "name": "郎峰",
+    "role": "反派",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "阴沉老练的黑道经营者",
+    "traits": [
+      "阴沉",
+      "计算",
+      "控制欲强",
+      "系统化思维"
+    ],
+    "decision_style": "先算计后行动，追求长期利益",
+    "risk_attitude": "极其倾向稳赚，不做无把握之事",
+    "cares_about": [
+      "利益最大化",
+      "稳定生意",
+      "权力架构"
+    ],
+    "fears": [
+      "失去保护伞",
+      "权力被挑战"
+    ],
+    "bottom_line": "无道德底线",
+    "relationships": {
+      "泰熊": "性伴侣与打手",
+      "边建军": "利益伙伴",
+      "徐队长": "保护伞",
+      "陶倩倩": "商品"
+    },
+    "trust_pattern": "只信任自己与绝对控制的对象",
+    "conflict_style": "借刀杀人，系统化压迫",
+    "consistency_issues": [
+      "一致——始终是冷酷的经营者"
+    ],
+    "breaking_point": "几乎无可利用的软肋",
+    "behavioral_model": "理性恶人，利益导向"
+  },
+  "char_005": {
+    "name": "泰熊",
+    "role": "反派",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "暴力执行者与性伴侣",
+    "traits": [
+      "体型庞大",
+      "暴力倾向",
+      "性虐狂",
+      "服从郎峰"
+    ],
+    "decision_style": "冲动直接，依赖郎峰指挥",
+    "risk_attitude": "偏好冒险",
+    "cares_about": [
+      "郎峰的需求",
+      "暴力快感"
+    ],
+    "fears": [
+      "遇到更强的人"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "郎峰": "恋人兼主人",
+      "陶倩倩": "施暴对象"
+    },
+    "trust_pattern": "完全信任郎峰",
+    "conflict_style": "物理压制",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "由郎峰下达指令可改变行为",
+    "behavioral_model": "暴力本能驱动"
+  },
+  "char_006": {
+    "name": "金巧燕",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "利用创伤转型的明星",
+    "traits": [
+      "现实",
+      "商业化",
+      "主动"
+    ],
+    "decision_style": "主动利用机会，商业化痛苦",
+    "risk_attitude": "冒险型（公开被强暴是高风险）",
+    "cares_about": [
+      "事业成功",
+      "公众形象"
+    ],
+    "fears": [
+      "未被揭露的秘密（可能也被控制）"
+    ],
+    "bottom_line": "为了成功可能不择手段",
+    "relationships": {
+      "陶倩倩": "同学，形成对比镜面"
+    },
+    "trust_pattern": "信任对自己有利的人和事",
+    "conflict_style": "间接竞争",
+    "consistency_issues": [
+      "对外形象与电话中的暧昧行为有矛盾，暗示她可能也处于性关系中"
+    ],
+    "breaking_point": "若她的录像带也被曝光，可能面临同样毁灭",
+    "behavioral_model": "机会主义，善用悲哀"
+  },
+  "char_007": {
+    "name": "宁馨",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "纯真但敏锐的学生",
+    "traits": [
+      "天真",
+      "专业敏感",
+      "好奇心强"
+    ],
+    "decision_style": "跟随他人判断",
+    "risk_attitude": "未定型，当前倾向稳妥（不深究）",
+    "cares_about": [
+      "舞蹈",
+      "对老师的尊敬"
+    ],
+    "fears": [
+      "打破认知的未知"
+    ],
+    "bottom_line": "尚未面临真正的道德考验",
+    "relationships": {
+      "陶倩倩": "学生与老师，产生怀疑"
+    },
+    "trust_pattern": "倾向信任权威与同伴",
+    "conflict_style": "不主动冲突",
+    "consistency_issues": [
+      "一致——符合单纯的学生形象"
+    ],
+    "breaking_point": "若确认真相，可能面临巨大的认知冲击",
+    "behavioral_model": "被环境引导，尚未形成稳定模式"
+  },
+  "char_008": {
+    "name": "边建军",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "提供场所与保护伞的灰色商人",
+    "traits": [
+      "圆滑",
+      "利益驱动",
+      "不愿惹事"
+    ],
+    "decision_style": "利益交换，回避矛盾",
+    "risk_attitude": "稳赚",
+    "cares_about": [
+      "生意不受打扰"
+    ],
+    "fears": [
+      "警方查封"
+    ],
+    "bottom_line": "不出人命即可",
+    "relationships": {
+      "徐队长": "保护伞",
+      "郎峰": "利益伙伴",
+      "黄毛": "合作过的地头蛇"
+    },
+    "trust_pattern": "利益信任",
+    "conflict_style": "回避",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "无明确弱点",
+    "behavioral_model": "商人逻辑"
+  },
+  "char_009": {
+    "name": "徐队长",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "系统性纵容的警察",
+    "traits": [
+      "官场思维",
+      "选择性失明",
+      "利益捆绑"
+    ],
+    "decision_style": "以利己和升迁为优先",
+    "risk_attitude": "稳赚",
+    "cares_about": [
+      "升迁",
+      "人脉"
+    ],
+    "fears": [
+      "事情被捅得太大"
+    ],
+    "bottom_line": "维持表面秩序即可",
+    "relationships": {
+      "边建军": "利益伙伴",
+      "黄毛": "利用对象（立功后击毙）"
+    },
+    "trust_pattern": "权力导向",
+    "conflict_style": "压制弱者，配合上级",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "当事件威胁到自身职位时可能切割",
+    "behavioral_model": "官僚生存法则"
+  },
+  "char_010": {
+    "name": "吸毒女人",
+    "role": "次要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "陶倩倩可能未来的写照——被毒品控制、与狗交合换取毒资",
+    "traits": [
+      "无底线",
+      "被毒品支配"
+    ],
+    "decision_style": "一切以换毒为唯一逻辑",
+    "risk_attitude": "已无选择",
+    "cares_about": [
+      "毒品"
+    ],
+    "fears": [
+      "断供"
+    ],
+    "bottom_line": "完全丧失",
+    "relationships": {
+      "黄毛": "交易对象",
+      "陶倩倩": "怨毒的注视对象"
+    },
+    "trust_pattern": "无信任",
+    "conflict_style": "用自毁方式获取需求",
+    "consistency_issues": [],
+    "breaking_point": "早已被毒品摧毁",
+    "behavioral_model": "瘾君子行为"
+  },
+  "char_011": {
+    "name": "秘书死者",
+    "role": "背景人物",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "故事中的陶倩倩——一个同样被彻底摧毁的女性，作为隐喻存在",
+    "traits": [
+      "优雅",
+      "精致",
+      "最终惨死"
+    ],
+    "decision_style": "不适用",
+    "risk_attitude": "不适用",
+    "cares_about": [
+      "不适用"
+    ],
+    "fears": [
+      "不适用"
+    ],
+    "bottom_line": "不适用",
+    "relationships": {
+      "嫖客": "曾服务",
+      "绑架者": "被虐杀"
+    },
+    "trust_pattern": "不适用",
+    "conflict_style": "不适用",
+    "consistency_issues": [],
+    "breaking_point": "不适用",
+    "behavioral_model": "符号角色"
+  },
+  "char_012": {
+    "name": "黄毛小弟们",
+    "role": "群体配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "黄毛的帮凶，执行暴力的无名地痞",
+    "traits": [
+      "服从",
+      "残忍",
+      "欺软怕硬"
+    ],
+    "decision_style": "听命于黄毛",
+    "risk_attitude": "盲从",
+    "cares_about": [
+      "跟对老大"
+    ],
+    "fears": [
+      "黄毛",
+      "郎峰"
+    ],
+    "bottom_line": "无原则",
+    "relationships": {
+      "黄毛": "头目",
+      "郎峰": "畏惧"
+    },
+    "trust_pattern": "群体盲从",
+    "conflict_style": "集体施暴",
+    "consistency_issues": [],
+    "breaking_point": "老大倒台",
+    "behavioral_model": "混混群体"
+  },
+  "char_013": {
+    "name": "女医生和护士",
+    "role": "环境配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "冷漠职业的医疗人员，对受害者二次伤害",
+    "traits": [
+      "公事公办",
+      "歧视"
+    ],
+    "decision_style": "按规则但不带同情",
+    "risk_attitude": "规避风险",
+    "cares_about": [
+      "工作流程"
+    ],
+    "fears": [
+      "惹麻烦"
+    ],
+    "bottom_line": "不主动伤害但也漠不关心",
+    "relationships": {
+      "陶倩倩": "患者，带着鄙视"
+    },
+    "trust_pattern": "职业距离",
+    "conflict_style": "冷暴力",
+    "consistency_issues": [],
+    "breaking_point": "不适用",
+    "behavioral_model": "体制冷漠的代表"
+  },
+  "char_014": {
+    "name": "黄狗",
+    "role": "小角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被用来兽交的工具",
+    "traits": [
+      "动物本能"
+    ],
+    "decision_style": "无",
+    "risk_attitude": "无",
+    "cares_about": [
+      "无"
+    ],
+    "fears": [
+      "无"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "女毒贩": "被迫交配对象"
+    },
+    "trust_pattern": "无",
+    "conflict_style": "无",
+    "consistency_issues": [
+      "无"
+    ],
+    "breaking_point": "无",
+    "behavioral_model": "无"
+  },
+  "char_015": {
+    "name": "女毒贩",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被海洛因完全摧毁的活死人",
+    "traits": [
+      "堕落",
+      "无耻",
+      "彻底丧失尊严"
+    ],
+    "decision_style": "完全由毒瘾支配",
+    "risk_attitude": "无——毒瘾替她决定一切",
+    "cares_about": [
+      "毒品"
+    ],
+    "fears": [
+      "断毒"
+    ],
+    "bottom_line": "无底线",
+    "relationships": {
+      "黄毛": "供应商",
+      "陶倩倩": "镜像对照"
+    },
+    "trust_pattern": "只信任能提供毒品的人",
+    "conflict_style": "为毒品可以屈服一切",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已经不存在底线",
+    "behavioral_model": "成瘾驱动"
+  },
+  "char_016": {
+    "name": "瘦子",
+    "role": "小角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "黄毛手下，怯懦",
+    "traits": [
+      "胆小",
+      "跟风"
+    ],
+    "decision_style": "跟随老大",
+    "risk_attitude": "保守",
+    "cares_about": [
+      "自保"
+    ],
+    "fears": [
+      "被老大惩罚"
+    ],
+    "bottom_line": "无明确底线",
+    "relationships": {
+      "黄毛": "老大"
+    },
+    "trust_pattern": "服从权威",
+    "conflict_style": "不主动",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "未展现",
+    "behavioral_model": "从众"
+  },
+  "char_017": {
+    "name": "嫖客",
+    "role": "小角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "付钱嫖陶倩倩的男人",
+    "traits": [
+      "表面优雅",
+      "讲述恐怖故事",
+      "事后给小费"
+    ],
+    "decision_style": "寻求特殊体验",
+    "risk_attitude": "略冒险（喜欢良家少妇）",
+    "cares_about": [
+      "自己的性满足"
+    ],
+    "fears": [
+      "未明确"
+    ],
+    "bottom_line": "保持表面体面",
+    "relationships": {
+      "陶倩倩": "一次性性交易"
+    },
+    "trust_pattern": "不信任妓女",
+    "conflict_style": "无",
+    "consistency_issues": [
+      "一致——典型的伪善嫖客"
+    ],
+    "breaking_point": "未展现",
+    "behavioral_model": "消费主义"
+  },
+  "char_018": {
+    "name": "医生",
+    "role": "小角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "冷漠的职业医生",
+    "traits": [
+      "职业化",
+      "冷漠",
+      "粗暴"
+    ],
+    "decision_style": "按规定办事，缺乏同理心",
+    "risk_attitude": "保守",
+    "cares_about": [
+      "完成工作"
+    ],
+    "fears": [
+      "不详"
+    ],
+    "bottom_line": "不会主动报警或帮助",
+    "relationships": {
+      "陶倩倩": "病人与医生"
+    },
+    "trust_pattern": "不信任病人",
+    "conflict_style": "使用冰冷的态度",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "未展现",
+    "behavioral_model": "职业麻木"
+  },
+  "char_019": {
+    "name": "护士",
+    "role": "小角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "同样冷漠的护理人员",
+    "traits": [
+      "粗鲁",
+      "不耐烦"
+    ],
+    "decision_style": "服从医生",
+    "risk_attitude": "保守",
+    "cares_about": [
+      "减少工作量"
+    ],
+    "fears": [
+      "未明确"
+    ],
+    "bottom_line": "不会越界干预",
+    "relationships": {
+      "陶倩倩": "护士与患者"
+    },
+    "trust_pattern": "权威导向",
+    "conflict_style": "消极攻击",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "未展现",
+    "behavioral_model": "职场应付"
+  }
+}

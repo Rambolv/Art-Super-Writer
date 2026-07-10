@@ -1,0 +1,10 @@
+code = open(r'c:\AI\ASR WRITER\ASR WRITER\standalone\_temp.js','r',encoding='utf-8').read()
+bt = code.count('`')
+print(f'Backticks: {bt} (odd={bt%2!=0})')
+print(f'Open braces: {code.count("{")}, Close braces: {code.count("}")}')
+print(f'Open parens: {code.count("(")}, Close parens: {code.count(")")}')
+print(f'Open brackets: {code.count("[")}, Close brackets: {code.count("]")}')
+if bt % 2 != 0:
+    last = code.rfind('`')
+    print(f'Last backtick at position {last}:')
+    print(repr(code[last-100:last+10]))

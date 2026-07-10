@@ -1,0 +1,468 @@
+{
+  "char_001": {
+    "name": "陶倩倩",
+    "role": "主角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被彻底摧毁的纯真者，一个在现实暴力与人性恶面前无力挣扎的芭蕾舞者",
+    "traits": [
+      "纯真被动",
+      "好学生式的顺从",
+      "情感脆弱",
+      "肉体柔韧",
+      "对舞蹈有执念"
+    ],
+    "decision_style": "犹豫、惧怕、逃避，只有在极端恐惧下才做出坚决决定",
+    "risk_attitude": "极端规避风险，宁可忍受已知痛苦也不敢尝试未知",
+    "cares_about": [
+      "身体尊严",
+      "教师身份",
+      "家庭名誉",
+      "不被学生看见"
+    ],
+    "fears": [
+      "公开羞辱",
+      "染上毒瘾",
+      "失去最后身份",
+      "被家人知道"
+    ],
+    "bottom_line": "以死抗拒毒品，但被持续的折磨击溃",
+    "relationships": {
+      "林刚": "前女友，充满愧疚与疏远",
+      "黄毛": "施暴者与控制者（仇恨但服从）",
+      "郎峰": "进阶控制者（恐惧与服从）",
+      "泰熊": "粗暴的施暴者（恐惧）",
+      "金巧燕": "同学，对比对象（疏离）",
+      "宁馨": "学生（刻意回避）"
+    },
+    "trust_pattern": "几乎不信任任何人，但最初对林刚有完全信任",
+    "conflict_style": "被动承受，无有效反抗，偶尔口头抗议后即屈服",
+    "consistency_issues": [
+      "被下药后当众自慰（药物作用）",
+      "威胁自杀却未执行（被郎峰进一步控制）"
+    ],
+    "breaking_point": "毒品威胁（曾激发反抗）和多次处女膜修复后的身体崩溃",
+    "behavioral_model": "受虐-服从-麻木的循环，缺乏主动行动"
+  },
+  "char_002": {
+    "name": "林刚",
+    "role": "主要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "从铁血退伍兵到被彻底打垮的乞丐，悲剧的另一位牺牲者",
+    "traits": [
+      "初期强硬",
+      "冲动",
+      "对女友有保护欲",
+      "在极端恐惧下屈服"
+    ],
+    "decision_style": "冲动直接，但在极度恐惧下放弃原则",
+    "risk_attitude": "前期冒险，后期极端规避风险",
+    "cares_about": [
+      "自己的肢体完整（后期）",
+      "女友（后期妥协）"
+    ],
+    "fears": [
+      "被打断最后一条腿",
+      "变成完全废人"
+    ],
+    "bottom_line": "默认让女友代自己挨打，保护欲被恐惧压倒",
+    "relationships": {
+      "陶倩倩": "男友（最初保护，后来愧疚与遗忘）",
+      "黄毛": "直接冲突，后被压倒"
+    },
+    "trust_pattern": "信任女友，不信任外部世界",
+    "conflict_style": "暴力对抗，被击败后彻底屈服",
+    "consistency_issues": [
+      "强壮时以一对五，被折磨后默认女友代己受罚"
+    ],
+    "breaking_point": "被威胁打断最后一条腿时放弃保护女友",
+    "behavioral_model": "先硬后软，在极端暴力下人格坍塌"
+  },
+  "char_003": {
+    "name": "黄毛",
+    "role": "反派",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "残忍、贪婪、短视的低级地痞，以暴力与下流手段满足控制欲",
+    "traits": [
+      "睚眦必报",
+      "虚荣",
+      "残忍",
+      "喜欢羞辱与录影",
+      "欺软怕硬"
+    ],
+    "decision_style": "冲动、情绪化，但在更强势力面前懂得隐忍",
+    "risk_attitude": "追求稳赚的剥削，但也进行冒险（贩毒）",
+    "cares_about": [
+      "面子",
+      "对猎物占有权",
+      "赚钱"
+    ],
+    "fears": [
+      "郎峰",
+      "警察",
+      "失去控制权"
+    ],
+    "bottom_line": "无底线，极度自私",
+    "relationships": {
+      "陶倩倩": "控制和施暴对象",
+      "林刚": "直接敌人",
+      "郎峰": "表面合作实则被压制",
+      "泰熊": "忌惮",
+      "边建军": "利用关系",
+      "小弟们": "手下"
+    },
+    "trust_pattern": "只信任自己的暴力，对其他人充满利用心态",
+    "conflict_style": "直接暴力，但遇到更强势力时退缩",
+    "consistency_issues": [],
+    "breaking_point": "无，他的残暴是持续的行为模式",
+    "behavioral_model": "以暴力获取利益，对弱者极尽残忍，对强者暂时屈服"
+  },
+  "char_004": {
+    "name": "郎峰",
+    "role": "反派",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "阴沉算计的高阶恶棍，善于将受害者变成可持续剥削的资产",
+    "traits": [
+      "冷静",
+      "有心机",
+      "男女通吃",
+      "善于经营控制"
+    ],
+    "decision_style": "算计、有层次、不动声色",
+    "risk_attitude": "稳赚导向，不做无收益的事",
+    "cares_about": [
+      "权力",
+      "控制",
+      "利益最大化"
+    ],
+    "fears": [
+      "被反噬",
+      "失去靠山"
+    ],
+    "bottom_line": "为了利益可以无恶不作",
+    "relationships": {
+      "泰熊": "下属（互相利用）",
+      "黄毛": "表面合作实际压榨",
+      "边建军": "合作互利",
+      "徐局长": "利益输送",
+      "陶倩倩": "资产与玩物"
+    },
+    "trust_pattern": "不信任任何人，只信任利益纽带",
+    "conflict_style": "阴冷施压，借刀杀人",
+    "consistency_issues": [],
+    "breaking_point": "几乎不可能，除非被更大的势力反噬",
+    "behavioral_model": "理性邪恶者，每一步都经过计算"
+  },
+  "char_005": {
+    "name": "泰熊",
+    "role": "反派",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "粗暴兽性的肉欲执行者，没有头脑只有暴力与性欲",
+    "traits": [
+      "蛮力",
+      "冲动",
+      "对性高度饥渴",
+      "缺乏细腻情感"
+    ],
+    "decision_style": "听郎峰决策，但性方面自主",
+    "risk_attitude": "只顾眼前，不计后果",
+    "cares_about": [
+      "性满足",
+      "打斗"
+    ],
+    "fears": [
+      "郎峰（唯一能压制他的人）"
+    ],
+    "bottom_line": "以暴力满足自身欲望，不顾他人死活",
+    "relationships": {
+      "郎峰": "服从与依赖",
+      "陶倩倩": "泄欲工具",
+      "黄毛": "不屑"
+    },
+    "trust_pattern": "听郎峰的话，对其他无所谓",
+    "conflict_style": "直接暴力",
+    "consistency_issues": [],
+    "breaking_point": "无法想象",
+    "behavioral_model": "蛮力型人格，追求即刻满足"
+  },
+  "char_006": {
+    "name": "金巧燕",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "同为性侵受害者，却将伤痕转化为资本走红的女明星",
+    "traits": [
+      "精明",
+      "利己",
+      "敢于炒作",
+      "回避真情"
+    ],
+    "decision_style": "抓住一切机会往上爬",
+    "risk_attitude": "前期冒险曝光，后期稳赚",
+    "cares_about": [
+      "名气",
+      "新专辑",
+      "公众形象"
+    ],
+    "fears": [
+      "被看穿脆弱",
+      "被取代"
+    ],
+    "bottom_line": "以自我成功为中心，牺牲真情",
+    "relationships": {
+      "陶倩倩": "同学（回避其不幸）",
+      "有权势男人": "肉体交易"
+    },
+    "trust_pattern": "只信任能带来利益的关系",
+    "conflict_style": "回避冲突，用公关手段应对",
+    "consistency_issues": [
+      "公开表示受害者应站起来，却回避陶倩倩的求救"
+    ],
+    "breaking_point": "如果被扒出她与郎峰的联系，可能会人设崩塌",
+    "behavioral_model": "利用者，将痛苦资本化"
+  },
+  "char_007": {
+    "name": "宁馨",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "青春活力的学生，是陶倩倩过去的化身也是耻辱的见证者",
+    "traits": [
+      "开朗",
+      "热爱舞蹈",
+      "崇拜老师"
+    ],
+    "decision_style": "无决策场景",
+    "risk_attitude": "不适用",
+    "cares_about": [
+      "舞蹈",
+      "快乐"
+    ],
+    "fears": [
+      "未知"
+    ],
+    "bottom_line": "单纯未涉世",
+    "relationships": {
+      "同学们": "朋友",
+      "陶倩倩": "师生仰慕"
+    },
+    "trust_pattern": "天真信任",
+    "conflict_style": "无冲突",
+    "consistency_issues": [],
+    "breaking_point": "不适用",
+    "behavioral_model": "正常青春期少女"
+  },
+  "char_008": {
+    "name": "边建军",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "黑白两道间游走的地头蛇，唯利是图的溜冰馆老板",
+    "traits": [
+      "圆滑",
+      "利益优先",
+      "与警方勾结"
+    ],
+    "decision_style": "见风使舵，不出头",
+    "risk_attitude": "绝对稳赚，避免风险",
+    "cares_about": [
+      "生意安稳"
+    ],
+    "fears": [
+      "惹上官司"
+    ],
+    "bottom_line": "不主动杀人，但包庇一切犯罪",
+    "relationships": {
+      "徐队长": "利益输送",
+      "郎峰": "合作",
+      "黄毛": "利用"
+    },
+    "trust_pattern": "只信利益",
+    "conflict_style": "调和",
+    "consistency_issues": [],
+    "breaking_point": "生意被封",
+    "behavioral_model": "商人唯利"
+  },
+  "char_009": {
+    "name": "徐队长",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "在维护治安面具下与黑社会勾结的腐败警官",
+    "traits": [
+      "虚伪",
+      "官僚",
+      "贪婪"
+    ],
+    "decision_style": "权衡利益，维持表面",
+    "risk_attitude": "绝对稳赚",
+    "cares_about": [
+      "升官",
+      "钱财"
+    ],
+    "fears": [
+      "被曝光"
+    ],
+    "bottom_line": "不择手段保住职位",
+    "relationships": {
+      "边建军": "利益共同体",
+      "郎峰": "间接庇护",
+      "黄毛": "利用后抛弃"
+    },
+    "trust_pattern": "只信权力与金钱",
+    "conflict_style": "压制正面的举报",
+    "consistency_issues": [],
+    "breaking_point": "被调查",
+    "behavioral_model": "腐败系统的一员"
+  },
+  "char_010": {
+    "name": "吸毒女人",
+    "role": "次要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "陶倩倩可能未来的写照——被毒品控制、与狗交合换取毒资",
+    "traits": [
+      "无底线",
+      "被毒品支配"
+    ],
+    "decision_style": "一切以换毒为唯一逻辑",
+    "risk_attitude": "已无选择",
+    "cares_about": [
+      "毒品"
+    ],
+    "fears": [
+      "断供"
+    ],
+    "bottom_line": "完全丧失",
+    "relationships": {
+      "黄毛": "交易对象",
+      "陶倩倩": "怨毒的注视对象"
+    },
+    "trust_pattern": "无信任",
+    "conflict_style": "用自毁方式获取需求",
+    "consistency_issues": [],
+    "breaking_point": "早已被毒品摧毁",
+    "behavioral_model": "瘾君子行为"
+  },
+  "char_011": {
+    "name": "秘书死者",
+    "role": "背景人物",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "故事中的陶倩倩——一个同样被彻底摧毁的女性，作为隐喻存在",
+    "traits": [
+      "优雅",
+      "精致",
+      "最终惨死"
+    ],
+    "decision_style": "不适用",
+    "risk_attitude": "不适用",
+    "cares_about": [
+      "不适用"
+    ],
+    "fears": [
+      "不适用"
+    ],
+    "bottom_line": "不适用",
+    "relationships": {
+      "嫖客": "曾服务",
+      "绑架者": "被虐杀"
+    },
+    "trust_pattern": "不适用",
+    "conflict_style": "不适用",
+    "consistency_issues": [],
+    "breaking_point": "不适用",
+    "behavioral_model": "符号角色"
+  },
+  "char_012": {
+    "name": "黄毛小弟们",
+    "role": "群体配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "黄毛的帮凶，执行暴力的无名地痞",
+    "traits": [
+      "服从",
+      "残忍",
+      "欺软怕硬"
+    ],
+    "decision_style": "听命于黄毛",
+    "risk_attitude": "盲从",
+    "cares_about": [
+      "跟对老大"
+    ],
+    "fears": [
+      "黄毛",
+      "郎峰"
+    ],
+    "bottom_line": "无原则",
+    "relationships": {
+      "黄毛": "头目",
+      "郎峰": "畏惧"
+    },
+    "trust_pattern": "群体盲从",
+    "conflict_style": "集体施暴",
+    "consistency_issues": [],
+    "breaking_point": "老大倒台",
+    "behavioral_model": "混混群体"
+  },
+  "char_013": {
+    "name": "女医生和护士",
+    "role": "环境配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "冷漠职业的医疗人员，对受害者二次伤害",
+    "traits": [
+      "公事公办",
+      "歧视"
+    ],
+    "decision_style": "按规则但不带同情",
+    "risk_attitude": "规避风险",
+    "cares_about": [
+      "工作流程"
+    ],
+    "fears": [
+      "惹麻烦"
+    ],
+    "bottom_line": "不主动伤害但也漠不关心",
+    "relationships": {
+      "陶倩倩": "患者，带着鄙视"
+    },
+    "trust_pattern": "职业距离",
+    "conflict_style": "冷暴力",
+    "consistency_issues": [],
+    "breaking_point": "不适用",
+    "behavioral_model": "体制冷漠的代表"
+  },
+  "char_014": {
+    "name": "黄狗",
+    "role": "动物角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被人类利用作为兽交工具的存在，象征彻底丧失人伦的环境",
+    "traits": [
+      "动物本能"
+    ],
+    "decision_style": "无",
+    "risk_attitude": "无",
+    "cares_about": [
+      "无"
+    ],
+    "fears": [
+      "无"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "吸毒女人": "被用作泄欲对象",
+      "黄毛": "主人"
+    },
+    "trust_pattern": "无",
+    "conflict_style": "无",
+    "consistency_issues": [],
+    "breaking_point": "无",
+    "behavioral_model": "无"
+  }
+}

@@ -1,0 +1,285 @@
+{
+  "char_001": {
+    "name": "曲鸣",
+    "role": "主角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "冷酷掌控者",
+    "traits": [
+      "极端控制欲",
+      "报复心强",
+      "不择手段",
+      "果断",
+      "冒险"
+    ],
+    "decision_style": "利己果断，不计后果",
+    "risk_attitude": "极端冒险",
+    "cares_about": [
+      "掌控一切",
+      "胜利"
+    ],
+    "fears": [
+      "失控",
+      "失败",
+      "背叛"
+    ],
+    "bottom_line": "无底线",
+    "relationships": {
+      "巴山": "兄弟兼工具",
+      "蔡鸡": "智囊",
+      "景俪": "性奴隶",
+      "杨芸": "玩物",
+      "苏毓琳": "情人与合作者",
+      "周东华": "对手"
+    },
+    "trust_pattern": "只信任巴山和蔡鸡",
+    "conflict_style": "主动进攻，用暴力或阴谋消除威胁",
+    "consistency_issues": [],
+    "breaking_point": "彻底的、无可挽回的失败或生命直接威胁",
+    "behavioral_model": "行动派，言行一致，绝无善良犹豫"
+  },
+  "char_002": {
+    "name": "蔡继永（蔡鸡）",
+    "role": "主要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "阴险智囊",
+    "traits": [
+      "足智多谋",
+      "毫无道德底线",
+      "冷静",
+      "算计"
+    ],
+    "decision_style": "冷静分析，权衡风险收益",
+    "risk_attitude": "倾向稳赚",
+    "cares_about": [
+      "曲鸣的信任",
+      "兄弟义气"
+    ],
+    "fears": [
+      "计划出错",
+      "被曲鸣抛弃"
+    ],
+    "bottom_line": "为兄弟利益可无底线",
+    "relationships": {
+      "曲鸣": "效忠对象",
+      "巴山": "兄弟",
+      "景俪": "性伙伴",
+      "杨芸": "工具性角色"
+    },
+    "trust_pattern": "信任曲鸣和巴山",
+    "conflict_style": "用计谋，先分析后行动",
+    "consistency_issues": [
+      "对杨芸有微弱同情但不违背利益"
+    ],
+    "breaking_point": "巨大的利益诱惑或极端生命威胁可能背叛",
+    "behavioral_model": "表里如一，阴险但不虚伪"
+  },
+  "char_003": {
+    "name": "巴山（大屌）",
+    "role": "主要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "暴力执行者",
+    "traits": [
+      "力大无穷",
+      "嗜血残暴",
+      "头脑简单"
+    ],
+    "decision_style": "凭本能，完全听从曲鸣",
+    "risk_attitude": "无思考，行动即一切",
+    "cares_about": [
+      "曲鸣的兄弟情",
+      "发泄暴力与性欲"
+    ],
+    "fears": [
+      "没架打",
+      "没女人玩"
+    ],
+    "bottom_line": "听曲鸣话，其余无底线",
+    "relationships": {
+      "曲鸣": "老大",
+      "蔡鸡": "兄弟",
+      "景俪": "性伙伴",
+      "杨芸": "性玩具"
+    },
+    "trust_pattern": "完全信任曲鸣",
+    "conflict_style": "直接暴力",
+    "consistency_issues": [],
+    "breaking_point": "几乎不可能背叛曲鸣",
+    "behavioral_model": "完全一致的野兽行为"
+  },
+  "char_004": {
+    "name": "景俪",
+    "role": "主要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "精神奴隶",
+    "traits": [
+      "强者崇拜",
+      "自我催眠",
+      "顺从"
+    ],
+    "decision_style": "放弃自我，以曲鸣意志为意志",
+    "risk_attitude": "被支配中求安稳",
+    "cares_about": [
+      "曲鸣的认可与宠爱"
+    ],
+    "fears": [
+      "失去曲鸣"
+    ],
+    "bottom_line": "能接受一切屈辱以维持关系",
+    "relationships": {
+      "曲鸣": "主人",
+      "苏毓琳": "竞争者",
+      "杨芸": "同类工具"
+    },
+    "trust_pattern": "盲目信任曲鸣",
+    "conflict_style": "不冲突，忍让",
+    "consistency_issues": [
+      "言行与客观事实不符（斯德哥尔摩）"
+    ],
+    "breaking_point": "遇到更强神或曲鸣彻底抛弃她",
+    "behavioral_model": "自我说服合理化一切"
+  },
+  "char_005": {
+    "name": "杨芸",
+    "role": "主要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被改造的玩物",
+    "traits": [
+      "脆弱",
+      "服从",
+      "善良重情"
+    ],
+    "decision_style": "被动妥协，牺牲自己避免更大伤害",
+    "risk_attitude": "为生存接受稳亏",
+    "cares_about": [
+      "周东华安危",
+      "身体痛苦"
+    ],
+    "fears": [
+      "像许晶一样被做成标本"
+    ],
+    "bottom_line": "愿为救周东华牺牲自己",
+    "relationships": {
+      "周东华": "内心真爱",
+      "曲鸣": "控制者",
+      "乌鸦": "名义老公",
+      "蔡鸡": "偶尔倾诉对象"
+    },
+    "trust_pattern": "不信任任何人，被迫服从",
+    "conflict_style": "哭泣哀求后妥协",
+    "consistency_issues": [
+      "外表顺从内心痛苦，签约卖身救周东华是合乎本性的爆发"
+    ],
+    "breaking_point": "周东华生命受威胁或本人被逼至绝境",
+    "behavioral_model": "前期一致后期割裂"
+  },
+  "char_006": {
+    "name": "苏毓琳",
+    "role": "主要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "眼镜蛇",
+    "traits": [
+      "务实",
+      "心机深",
+      "忍辱负重",
+      "目标明确"
+    ],
+    "decision_style": "深思熟虑，利益导向",
+    "risk_attitude": "在可控范围内冒险追求最大收益",
+    "cares_about": [
+      "复仇方德才",
+      "改变命运"
+    ],
+    "fears": [
+      "再次沦为没有筹码的弱者"
+    ],
+    "bottom_line": "为达目的可暂时屈身",
+    "relationships": {
+      "曲鸣": "利用对象",
+      "方德才": "仇人",
+      "温怡": "前姐妹后被背弃",
+      "景俪": "表面友好"
+    },
+    "trust_pattern": "不信任任何人，只信自己",
+    "conflict_style": "假意顺从，等待时机",
+    "consistency_issues": [
+      "表里不一但合理"
+    ],
+    "breaking_point": "复仇完成且获得足够安全感后可能停止阴谋",
+    "behavioral_model": "有理有节的复仇者"
+  },
+  "char_007": {
+    "name": "温怡",
+    "role": "主要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "逃生者",
+    "traits": [
+      "识时务",
+      "求生欲强",
+      "能屈能伸"
+    ],
+    "decision_style": "隐忍果断，为生存理智冒险",
+    "risk_attitude": "倾向稳赚，但为生存可理智冒险",
+    "cares_about": [
+      "自身安全与自由"
+    ],
+    "fears": [
+      "被无声无息处理"
+    ],
+    "bottom_line": "愿意用任何方式保命",
+    "relationships": {
+      "苏毓琳": "前姐妹后被出卖",
+      "曲鸣": "压迫者",
+      "阿黄": "看守者"
+    },
+    "trust_pattern": "不信任任何人",
+    "conflict_style": "假意顺从后寻找致命一击或逃跑",
+    "consistency_issues": [
+      "顺从是伪装，逃亡是必然"
+    ],
+    "breaking_point": "彻底洗脑或外界更危险",
+    "behavioral_model": "老练的社会人"
+  },
+  "char_008": {
+    "name": "周东华",
+    "role": "主要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "复仇的失意者",
+    "traits": [
+      "天赋异禀",
+      "骄傲",
+      "执着爱情",
+      "情绪化"
+    ],
+    "decision_style": "情绪化，凭直觉，有原则",
+    "risk_attitude": "球场上冒险，场下较规矩",
+    "cares_about": [
+      "杨芸",
+      "篮球前途"
+    ],
+    "fears": [
+      "被欺骗背叛"
+    ],
+    "bottom_line": "不会使用曲鸣那样的卑鄙手段",
+    "relationships": {
+      "杨芸": "前女友",
+      "陈劲": "队友",
+      "刚锋": "好友",
+      "曲鸣": "仇敌"
+    },
+    "trust_pattern": "信任队友，对女友全心投入",
+    "conflict_style": "先沟通，被激怒后暴力失控",
+    "consistency_issues": [
+      "暴打乌鸦是出人意料的极端行为，但合理于被彻底激怒"
+    ],
+    "breaking_point": "失去一切且看不到希望可能走向极端",
+    "behavioral_model": "较为正直，但易被情绪驱动"
+  }
+}

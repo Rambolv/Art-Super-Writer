@@ -1,0 +1,201 @@
+{
+  "trunk": [
+    {
+      "chapter": 1,
+      "event": "邢飞扬奉命下山赴福建拜访师兄朱天笑",
+      "importance": 8
+    },
+    {
+      "chapter": 5,
+      "event": "明月山庄被灭门，朱天笑战死，众女被俘",
+      "importance": 10
+    },
+    {
+      "chapter": 9,
+      "event": "邢飞扬反杀江门五虎，救回苏玲（半程）",
+      "importance": 7
+    },
+    {
+      "chapter": 14,
+      "event": "铁索桥一战，邢飞扬砍断铁索，击杀多名敌人",
+      "importance": 8
+    },
+    {
+      "chapter": 20,
+      "event": "救出乔秀，与月照、沈锦多次交手",
+      "importance": 7
+    },
+    {
+      "chapter": 29,
+      "event": "雪崩伏击，水仙子被擒；闻雷被水仙子所杀",
+      "importance": 9
+    },
+    {
+      "chapter": 33,
+      "event": "得知朱天笑死讯，邢飞扬彻底点燃复仇之火",
+      "importance": 9
+    },
+    {
+      "chapter": 34,
+      "event": "邢飞扬残酷折磨水仙子，建立主奴关系",
+      "importance": 7
+    },
+    {
+      "chapter": 43,
+      "event": "夜探铁虎堂，救出吴悦，得知朱氏父子已死",
+      "importance": 8
+    },
+    {
+      "chapter": 56,
+      "event": "水仙子偷袭闻雷致死，邢飞扬与之重逢并再次制服",
+      "importance": 9
+    },
+    {
+      "chapter": 60,
+      "event": "赵无极前往金陵见诚亲王，故事重心转移",
+      "importance": 8
+    },
+    {
+      "chapter": 61,
+      "event": "邢飞扬利用水磨对水仙子进行系统性散功",
+      "importance": 7
+    },
+    {
+      "chapter": 70,
+      "event": "邢飞扬回到终南山，发现师门被屠，师娘惨死，师妹失踪",
+      "importance": 10
+    },
+    {
+      "chapter": 79,
+      "event": "金陵驿馆激战，东二战死，赵无极负伤逃逸",
+      "importance": 9
+    },
+    {
+      "chapter": 83,
+      "event": "揭晓于括海叛变，诚亲王是幕后黑手",
+      "importance": 10
+    },
+    {
+      "chapter": 87,
+      "event": "柳无涯被于括海暗杀，摩天崖势力覆灭",
+      "importance": 10
+    },
+    {
+      "chapter": 91,
+      "event": "诚亲王率军围攻武夷山，苏玲、陈兰姿等被虐杀",
+      "importance": 8
+    },
+    {
+      "chapter": 93,
+      "event": "吴悦被衙门差役残忍杀害",
+      "importance": 7
+    },
+    {
+      "chapter": 97,
+      "event": "赵无极劫回程华珠，跳江自尽",
+      "importance": 9
+    },
+    {
+      "chapter": 99,
+      "event": "诚亲王血洗吴府，梅四娘失踪，柳霜怀被俘",
+      "importance": 9
+    },
+    {
+      "chapter": 100,
+      "event": "邢飞扬与南宫媛（尔朱秀媛）相依为命，踏上复仇之路",
+      "importance": 9
+    }
+  ],
+  "branches": [
+    {
+      "name": "梅四娘与吴悦的逃亡线",
+      "start_chapter": 45,
+      "status": "吴悦被杀，梅四娘下落不明",
+      "relation": 9
+    },
+    {
+      "name": "柳霜怀（小师妹）的遭遇线",
+      "start_chapter": 70,
+      "status": "被诚亲王军队截获，落入虎口",
+      "relation": 10
+    },
+    {
+      "name": "诚亲王的政治阴谋线",
+      "start_chapter": 60,
+      "status": "成功清洗赵无极势力，势力扩张",
+      "relation": 8
+    },
+    {
+      "name": "赵无极与程华珠的终局线",
+      "start_chapter": 60,
+      "status": "跳江自尽，已收线",
+      "relation": 7
+    },
+    {
+      "name": "水仙子的处置线",
+      "start_chapter": 34,
+      "status": "功力被吸取大半，被邢飞扬彻底控制",
+      "relation": 5
+    },
+    {
+      "name": "南宫媛（尔朱秀媛）的复仇/新生线",
+      "start_chapter": 81,
+      "status": "被邢飞扬所救，选择跟随他",
+      "relation": 6
+    }
+  ],
+  "buds": [
+    {
+      "chapter": 91,
+      "foreshadow": "梅四娘是否存活？她与吴悦最终会怎样？",
+      "urgency": "极高"
+    },
+    {
+      "chapter": 99,
+      "foreshadow": "柳霜怀的遭遇及最终命运",
+      "urgency": "极高"
+    },
+    {
+      "chapter": 60,
+      "foreshadow": "诚亲王是否会暴露野心，最终与朝廷翻脸？",
+      "urgency": "高"
+    },
+    {
+      "chapter": 33,
+      "foreshadow": "朱天笑之死的真相是否还有隐情？",
+      "urgency": "中"
+    },
+    {
+      "chapter": 97,
+      "foreshadow": "赵无极与程华珠是否真正死亡？",
+      "urgency": "低"
+    },
+    {
+      "chapter": 85,
+      "foreshadow": "水仙子会否被邢飞扬彻底抛弃或杀死？",
+      "urgency": "低"
+    }
+  ],
+  "roots": [
+    {
+      "chapter": 1,
+      "category": "现实江湖与庙堂交织的世界观",
+      "content": "小说不局限于武林恩怨，而是将江湖置于朝廷政治背景下，形成三方角力格局。"
+    },
+    {
+      "chapter": 1,
+      "category": "极致的暴力与残酷美学",
+      "content": "作者以风格化的文字毫不回避地描写暴力、凌辱与死亡，展示道德彻底崩塌的世界。"
+    },
+    {
+      "chapter": 1,
+      "category": "灰度人物与无绝对善恶",
+      "content": "人物没有简单的好人坏人之分，主角邢飞扬、赵无极、诚亲王都是正邪两赋的复杂体。"
+    }
+  ],
+  "metrics": {
+    "pending_buds": 6,
+    "active_branches": 6,
+    "growth_health": 0.6
+  }
+}

@@ -1,0 +1,1347 @@
+{
+  "char_001": {
+    "name": "邢飞扬",
+    "role": "主角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "从阳光少年到孤绝复仇者的蜕变",
+    "traits": [
+      "冷静",
+      "果断",
+      "狠辣",
+      "重情义",
+      "天赋异禀的猎手",
+      "机敏"
+    ],
+    "decision_style": "直觉驱动，果断狠辣，常抓住战机做出高风险决策",
+    "risk_attitude": "极度冒险",
+    "cares_about": [
+      "同门与亲人的安危"
+    ],
+    "fears": [
+      "无力保护重要的人"
+    ],
+    "bottom_line": "绝不背叛同门或亲人",
+    "relationships": {
+      "亲近": [
+        "朱天笑",
+        "柳霜怀",
+        "梅四娘"
+      ],
+      "冲突": [
+        "赵无极",
+        "诚亲王",
+        "水仙子",
+        "于括海"
+      ]
+    },
+    "trust_pattern": "迅速信任同门和难得的恩人，长期警惕敌人",
+    "conflict_style": "避开正面硬抗，利用计谋、地形、时机进行高效猎杀",
+    "consistency_issues": [
+      "对自己的残酷行为缺乏内省，整体一致性高"
+    ],
+    "breaking_point": "只有被高级精神控制术摧毁心智，否则绝不可能背叛同门",
+    "behavioral_model": "复仇驱动型，以行动为先，言语极少"
+  },
+  "char_002": {
+    "name": "赵无极",
+    "role": "主要反派",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "野心勃勃、众叛亲离的枭雄",
+    "traits": [
+      "善于算计",
+      "虚伪儒雅",
+      "控制欲极强",
+      "残忍",
+      "擅长折磨术"
+    ],
+    "decision_style": "谋定而后动，关键时刻敢下重注",
+    "risk_attitude": "稳赚型，追求利益最大化，但痴迷程华珠是例外",
+    "cares_about": [
+      "王图霸业",
+      "自身权威"
+    ],
+    "fears": [
+      "功亏一篑",
+      "被人背叛"
+    ],
+    "bottom_line": "可牺牲任何人，只对东二有真感情",
+    "relationships": {
+      "亲近": [
+        "东二"
+      ],
+      "冲突": [
+        "邢飞扬",
+        "诚亲王",
+        "夜舞"
+      ]
+    },
+    "trust_pattern": "只信任极少数核心（如东二），对其他人保持利用和猜疑",
+    "conflict_style": "先冷静布局，再果断出击，不恋战",
+    "consistency_issues": [
+      "对程华珠的执迷偏离了利益最大化原则"
+    ],
+    "breaking_point": "事业彻底绝望时可能崩溃，跳江是其最终选择",
+    "behavioral_model": "野心与权谋驱动型"
+  },
+  "char_003": {
+    "name": "诚亲王",
+    "role": "主要反派",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "躲在幕后的顶级权谋家",
+    "traits": [
+      "阴险",
+      "伪善",
+      "深谋远虑",
+      "冷酷无情",
+      "善于借刀杀人"
+    ],
+    "decision_style": "深谋远虑，冷酷无情，永远留后手",
+    "risk_attitude": "绝对稳赚型，只以最小风险换取最大利益",
+    "cares_about": [
+      "皇位"
+    ],
+    "fears": [
+      "阴谋败露",
+      "遭遇反噬"
+    ],
+    "bottom_line": "为达目的不择手段，任何人均可牺牲",
+    "relationships": {
+      "亲近": [
+        "魏若文",
+        "沙万城",
+        "于括海"
+      ],
+      "冲突": [
+        "赵无极",
+        "邢飞扬"
+      ]
+    },
+    "trust_pattern": "只信任心腹，对其他人保持利用关系",
+    "conflict_style": "从不亲自出手，永远躲在幕后操纵",
+    "consistency_issues": [
+      "极度伪善，言行严重不一致，属合理政客行为"
+    ],
+    "breaking_point": "只有当自己被更强大的力量反噬时才可能放弃皇位目标",
+    "behavioral_model": "权谋与野心驱动型，永远借力打力"
+  },
+  "char_004": {
+    "name": "梅四娘",
+    "role": "主要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "从玩物到主动追随的忠诚伴侣",
+    "traits": [
+      "识时务",
+      "求生欲强",
+      "灵活变通",
+      "以柔克刚",
+      "忠诚"
+    ],
+    "decision_style": "基于情感与忠诚，后期完全为主子着想",
+    "risk_attitude": "冒险，选择跟随邢飞扬本身就是巨大冒险",
+    "cares_about": [
+      "邢飞扬的安危和感受"
+    ],
+    "fears": [
+      "被邢飞扬抛弃",
+      "再次落入生不如死的境地"
+    ],
+    "bottom_line": "绝不肯叛真心对待自己的人",
+    "relationships": {
+      "亲近": [
+        "邢飞扬"
+      ],
+      "冲突": [
+        "月照",
+        "水仙子等原赵无极集团成员"
+      ]
+    },
+    "trust_pattern": "初期谨慎，后期完全信任邢飞扬",
+    "conflict_style": "以柔克刚，避实就虚",
+    "consistency_issues": [
+      "整个转变过程自然可信，高度一致"
+    ],
+    "breaking_point": "除非邢飞扬先做出无法原谅的背叛，否则绝不背叛",
+    "behavioral_model": "求生与情感驱动型"
+  },
+  "char_005": {
+    "name": "水仙子",
+    "role": "主要角色（原反派）",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "美丽强大但内心脆弱的工具人，最终被彻底摧毁并占有",
+    "traits": [
+      "残忍",
+      "外在圣洁内在冷酷",
+      "擅长散功术",
+      "意志脆弱"
+    ],
+    "decision_style": "基于生存本能，永远趋利避害",
+    "risk_attitude": "保命优先，绝对不冒任何生命风险",
+    "cares_about": [
+      "自己"
+    ],
+    "fears": [
+      "被施加自己曾对别人做过的极致痛苦与侮辱"
+    ],
+    "bottom_line": "没有底线，一切行为只为活命",
+    "relationships": {
+      "亲近": [
+        "赵无极（原上司）"
+      ],
+      "冲突": [
+        "邢飞扬（征服者）"
+      ]
+    },
+    "trust_pattern": "只信任强者或能给她安全感的人",
+    "conflict_style": "强势时残忍，弱势时谄媚",
+    "consistency_issues": [
+      "高度一致于趋利避害的本性"
+    ],
+    "breaking_point": "几乎无法违背求生本能，只有看到真正复仇希望才可能反抗",
+    "behavioral_model": "生存本能驱动型，毫无原则"
+  },
+  "char_006": {
+    "name": "程华珠",
+    "role": "主要角色",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被彻底摧毁灵魂的‘活死人’，以沉默进行最强烈的反抗",
+    "traits": [
+      "沉默",
+      "坚韧",
+      "冷漠",
+      "意志坚定"
+    ],
+    "decision_style": "不做决定，只被动承受",
+    "risk_attitude": "不适用",
+    "cares_about": [
+      "已故丈夫朱天笑"
+    ],
+    "fears": [
+      "连沉默的资格都被剥夺"
+    ],
+    "bottom_line": "以沉默抵抗一切",
+    "relationships": {
+      "亲近": [
+        "朱天笑（已故）"
+      ],
+      "冲突": [
+        "赵无极"
+      ]
+    },
+    "trust_pattern": "不信任任何人",
+    "conflict_style": "不应对，以绝对的沉默应对所有凌辱",
+    "consistency_issues": [
+      "绝对的言行一致，贯穿始终"
+    ],
+    "breaking_point": "不可能被打破，除非朱天笑复活",
+    "behavioral_model": "灵魂死亡型，只剩躯体"
+  },
+  "char_007": {
+    "name": "朱笑眉",
+    "role": "主要角色（受害者）",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "心智被彻底摧毁的无知无觉性奴",
+    "traits": [
+      "绝对服从",
+      "无知无觉",
+      "如行尸走肉"
+    ],
+    "decision_style": "无，完全听从命令",
+    "risk_attitude": "不适用",
+    "cares_about": [
+      "主人的命令"
+    ],
+    "fears": [
+      "未知"
+    ],
+    "bottom_line": "已无自我底线",
+    "relationships": {
+      "亲近": [
+        "无"
+      ],
+      "冲突": [
+        "无"
+      ]
+    },
+    "trust_pattern": "已无信任概念",
+    "conflict_style": "无，完全是待宰羔羊",
+    "consistency_issues": [
+      "绝对一致于被训练成的行为模式"
+    ],
+    "breaking_point": "原本的本性已被彻底摧毁，无法再用常理判断",
+    "behavioral_model": "条件反射型机器人"
+  },
+  "char_008": {
+    "name": "朱天笑",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "为不拖累妻子而自绝的悲壮同门",
+    "traits": [
+      "重情重义",
+      "刚烈"
+    ],
+    "decision_style": "牺牲型",
+    "risk_attitude": "不适用",
+    "cares_about": [
+      "妻子程华珠",
+      "门派"
+    ],
+    "fears": [
+      "累及家人"
+    ],
+    "bottom_line": "宁可自杀也不愿成为人质",
+    "relationships": {
+      "亲近": [
+        "程华珠",
+        "邢飞扬"
+      ],
+      "冲突": [
+        "赵无极"
+      ]
+    },
+    "trust_pattern": "信任同门",
+    "conflict_style": "硬拼到底，宁死不屈",
+    "consistency_issues": [
+      "高度一致，壮烈牺牲"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "侠义牺牲型"
+  },
+  "char_009": {
+    "name": "闻雷",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "守礼君子，因师弟大意而被偷袭致死",
+    "traits": [
+      "正直",
+      "守礼",
+      "谨慎"
+    ],
+    "decision_style": "稳重型",
+    "risk_attitude": "保守",
+    "cares_about": [
+      "门派",
+      "信义"
+    ],
+    "fears": [
+      "违背道义"
+    ],
+    "bottom_line": "匡扶正义",
+    "relationships": {
+      "亲近": [
+        "邢飞扬",
+        "柳无涯"
+      ],
+      "冲突": [
+        "水仙子"
+      ]
+    },
+    "trust_pattern": "容易相信他人（最终被水仙子欺骗）",
+    "conflict_style": "正面冲突",
+    "consistency_issues": [
+      "一致，但过于信任陌生人导致被杀"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "传统侠客型"
+  },
+  "char_010": {
+    "name": "于括海",
+    "role": "配角（叛徒）",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被收买的弑师恶徒",
+    "traits": [
+      "懦弱",
+      "贪生怕死",
+      "卑鄙"
+    ],
+    "decision_style": "见风使舵",
+    "risk_attitude": "极度保守，为保命不择手段",
+    "cares_about": [
+      "自己"
+    ],
+    "fears": [
+      "死亡",
+      "严刑拷打"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "亲近": [
+        "诚亲王"
+      ],
+      "冲突": [
+        "师父柳无涯",
+        "邢飞扬"
+      ]
+    },
+    "trust_pattern": "只信任强者和能给自己好处的人",
+    "conflict_style": "背后偷袭，绝不明面冲突",
+    "consistency_issues": [
+      "高度一致于自私本性"
+    ],
+    "breaking_point": "无底线，任何情况下都可能背叛",
+    "behavioral_model": "投机背叛型"
+  },
+  "char_011": {
+    "name": "柳无涯",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被叛徒暗算的悲壮掌门",
+    "traits": [
+      "稳重",
+      "慈祥",
+      "以大局为重",
+      "武功高强"
+    ],
+    "decision_style": "深思熟虑",
+    "risk_attitude": "稳重型",
+    "cares_about": [
+      "门派",
+      "子女",
+      "朝廷大义"
+    ],
+    "fears": [
+      "门派覆灭",
+      "子女受难"
+    ],
+    "bottom_line": "不违背道义",
+    "relationships": {
+      "亲近": [
+        "妻子何莲心",
+        "女儿柳霜怀",
+        "五个弟子"
+      ],
+      "冲突": [
+        "赵无极",
+        "诚亲王"
+      ]
+    },
+    "trust_pattern": "相信同门和弟子",
+    "conflict_style": "正面硬撼，但非不理智",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "唯一弱点是太相信弟子于括海",
+    "behavioral_model": "名门正派掌门型"
+  },
+  "char_012": {
+    "name": "何莲心",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被虐杀来刺激主角的牺牲品",
+    "traits": [
+      "善良",
+      "慈母"
+    ],
+    "decision_style": "无",
+    "risk_attitude": "不适用",
+    "cares_about": [
+      "家人"
+    ],
+    "fears": [
+      "不适用"
+    ],
+    "bottom_line": "不适用",
+    "relationships": {
+      "亲近": [
+        "丈夫柳无涯",
+        "女儿柳霜怀",
+        "弟子"
+      ],
+      "冲突": [
+        "诚亲王"
+      ]
+    },
+    "trust_pattern": "不适用",
+    "conflict_style": "无反抗之力",
+    "consistency_issues": [
+      "无明显"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "被害者型"
+  },
+  "char_013": {
+    "name": "柳霜怀",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "落入虎口的懵懂少女",
+    "traits": [
+      "刁蛮",
+      "单纯",
+      "任性"
+    ],
+    "decision_style": "情绪化",
+    "risk_attitude": "冒险（赌气出走）",
+    "cares_about": [
+      "家人",
+      "邢飞扬"
+    ],
+    "fears": [
+      "未知",
+      "失去保护"
+    ],
+    "bottom_line": "不背叛亲近的人",
+    "relationships": {
+      "亲近": [
+        "父母",
+        "邢飞扬"
+      ],
+      "冲突": [
+        "诚亲王"
+      ]
+    },
+    "trust_pattern": "轻信",
+    "conflict_style": "无反抗之力",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "只有在极度恐惧下才可能放弃原则",
+    "behavioral_model": "天真受害型"
+  },
+  "char_014": {
+    "name": "吴悦",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "善良柔弱、最后被残忍虐杀的大家闺秀",
+    "traits": [
+      "善良",
+      "柔弱",
+      "胆小",
+      "聪明"
+    ],
+    "decision_style": "畏缩，不敢回家",
+    "risk_attitude": "保守",
+    "cares_about": [
+      "家人",
+      "自我名声"
+    ],
+    "fears": [
+      "再次被污辱",
+      "连累父母"
+    ],
+    "bottom_line": "不愿连累亲人",
+    "relationships": {
+      "亲近": [
+        "父母",
+        "朱笑眉（表姐）"
+      ],
+      "冲突": [
+        "赵无极",
+        "衙役"
+      ]
+    },
+    "trust_pattern": "容易相信帮助自己的人",
+    "conflict_style": "逃避",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "软弱受害型"
+  },
+  "char_015": {
+    "name": "苏玲",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被活埋的朱门儿媳",
+    "traits": [
+      "坚韧",
+      "脆弱"
+    ],
+    "decision_style": "认命",
+    "risk_attitude": "被动",
+    "cares_about": [
+      "家人"
+    ],
+    "fears": [
+      "折磨"
+    ],
+    "bottom_line": "无反抗之力",
+    "relationships": {
+      "亲近": [
+        "丈夫朱长风",
+        "朱笑眉"
+      ],
+      "冲突": [
+        "赵无极",
+        "诚亲王"
+      ]
+    },
+    "trust_pattern": "信任邢飞扬等来救者",
+    "conflict_style": "无",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "被动受害者型"
+  },
+  "char_016": {
+    "name": "乔秀",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被折磨后被迫求生的妾室",
+    "traits": [
+      "脆弱",
+      "麻木",
+      "求生欲"
+    ],
+    "decision_style": "被动",
+    "risk_attitude": "保命",
+    "cares_about": [
+      "自己"
+    ],
+    "fears": [
+      "死亡",
+      "折磨"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "亲近": [
+        "无"
+      ],
+      "冲突": [
+        "赵无极"
+      ]
+    },
+    "trust_pattern": "不信任",
+    "conflict_style": "无",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "只要面临死亡可能崩溃",
+    "behavioral_model": "被动受害者型"
+  },
+  "char_017": {
+    "name": "陈兰姿",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被韦光正虐杀的梅龙镇囚女",
+    "traits": [
+      "刚烈",
+      "不甘"
+    ],
+    "decision_style": "寻死",
+    "risk_attitude": "不适用",
+    "cares_about": [
+      "尊严"
+    ],
+    "fears": [
+      "继续受辱"
+    ],
+    "bottom_line": "宁死不屈",
+    "relationships": {
+      "亲近": [
+        "无"
+      ],
+      "冲突": [
+        "史洪心",
+        "诚亲王"
+      ]
+    },
+    "trust_pattern": "不信任",
+    "conflict_style": "自杀抵抗",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "刚烈受害者型"
+  },
+  "char_018": {
+    "name": "钟映红",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "为救母亲自刎的刚烈少女",
+    "traits": [
+      "刚烈",
+      "勇敢",
+      "孝顺"
+    ],
+    "decision_style": "牺牲型",
+    "risk_attitude": "冒险",
+    "cares_about": [
+      "母亲陶萍"
+    ],
+    "fears": [
+      "母亲继续受辱"
+    ],
+    "bottom_line": "可自我牺牲",
+    "relationships": {
+      "亲近": [
+        "母亲陶萍",
+        "邢飞扬"
+      ],
+      "冲突": [
+        "赵无极",
+        "诚亲王"
+      ]
+    },
+    "trust_pattern": "信任邢飞扬",
+    "conflict_style": "正面反抗，至死不屈",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "牺牲复仇型"
+  },
+  "char_019": {
+    "name": "陶萍",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被女儿亲手杀死的解脱者",
+    "traits": [
+      "脆弱",
+      "受尽折磨"
+    ],
+    "decision_style": "无",
+    "risk_attitude": "无",
+    "cares_about": [
+      "女儿"
+    ],
+    "fears": [
+      "继续受辱"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "亲近": [
+        "女儿钟映红"
+      ],
+      "冲突": [
+        "赵无极"
+      ]
+    },
+    "trust_pattern": "不适用",
+    "conflict_style": "无",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "被动受害者型"
+  },
+  "char_020": {
+    "name": "周银然",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被月照虐待至死的朱门大少奶奶",
+    "traits": [
+      "脆弱",
+      "认命"
+    ],
+    "decision_style": "无",
+    "risk_attitude": "无",
+    "cares_about": [
+      "家人"
+    ],
+    "fears": [
+      "折磨"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "亲近": [
+        "朱知元"
+      ],
+      "冲突": [
+        "月照"
+      ]
+    },
+    "trust_pattern": "不适用",
+    "conflict_style": "无",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "被动受害者型"
+  },
+  "char_021": {
+    "name": "蒋青衫",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被削成人棍的昔日侠女",
+    "traits": [
+      "倔强",
+      "不屈"
+    ],
+    "decision_style": "寻死",
+    "risk_attitude": "冒险",
+    "cares_about": [
+      "尊严"
+    ],
+    "fears": [
+      "继续受辱"
+    ],
+    "bottom_line": "宁死不屈",
+    "relationships": {
+      "亲近": [
+        "无"
+      ],
+      "冲突": [
+        "月照",
+        "赵无极"
+      ]
+    },
+    "trust_pattern": "不适用",
+    "conflict_style": "寻死抵抗",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已无法用常理判断",
+    "behavioral_model": "终极受害者型"
+  },
+  "char_022": {
+    "name": "东二",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "赵无极最后的忠诚兄弟",
+    "traits": [
+      "忠诚",
+      "勇猛",
+      "粗豪"
+    ],
+    "decision_style": "冲动有胆",
+    "risk_attitude": "冒险",
+    "cares_about": [
+      "赵无极"
+    ],
+    "fears": [
+      "不适用"
+    ],
+    "bottom_line": "忠诚于赵无极",
+    "relationships": {
+      "亲近": [
+        "赵无极"
+      ],
+      "冲突": [
+        "柳无涯",
+        "云锦"
+      ]
+    },
+    "trust_pattern": "完全信任赵无极",
+    "conflict_style": "正面硬撼，不后退",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "忠勇打手型"
+  },
+  "char_023": {
+    "name": "法印",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "武功高强但被邢飞扬雪崩暗算的头陀",
+    "traits": [
+      "暴烈",
+      "残忍",
+      "武功高"
+    ],
+    "decision_style": "冲动",
+    "risk_attitude": "冒险",
+    "cares_about": [
+      "杀戮快感"
+    ],
+    "fears": [
+      "无"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "亲近": [
+        "月照",
+        "赵无极"
+      ],
+      "冲突": [
+        "邢飞扬"
+      ]
+    },
+    "trust_pattern": "信任同伴",
+    "conflict_style": "正面硬打",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "暴力打手型"
+  },
+  "char_024": {
+    "name": "月照",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "精于药理和折磨术的歹毒道士",
+    "traits": [
+      "狡猾",
+      "残忍",
+      "精通折磨术"
+    ],
+    "decision_style": "谨慎但有疏漏",
+    "risk_attitude": "保守",
+    "cares_about": [
+      "自己"
+    ],
+    "fears": [
+      "赵无极责罚"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "亲近": [
+        "法印",
+        "赵无极"
+      ],
+      "冲突": [
+        "邢飞扬"
+      ]
+    },
+    "trust_pattern": "信任同伴",
+    "conflict_style": "正面冲突配合诡计",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死（被邢飞扬射杀）",
+    "behavioral_model": "歹毒头目型"
+  },
+  "char_025": {
+    "name": "沈锦",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被邢飞扬戏耍并最终烧死的春香楼之主",
+    "traits": [
+      "贪婪",
+      "稍有谨慎"
+    ],
+    "decision_style": "谨慎但不及时",
+    "risk_attitude": "保守",
+    "cares_about": [
+      "财富",
+      "女人"
+    ],
+    "fears": [
+      "赵无极怪罪"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "亲近": [
+        "月照",
+        "赵无极"
+      ],
+      "冲突": [
+        "邢飞扬"
+      ]
+    },
+    "trust_pattern": "信任同伴",
+    "conflict_style": "正面硬碰偶有计谋",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "庸才头目型"
+  },
+  "char_026": {
+    "name": "庄铁山",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "赵无极北方的铁杆盟友",
+    "traits": [
+      "忠诚",
+      "勇猛"
+    ],
+    "decision_style": "对赵无极言听计从",
+    "risk_attitude": "保守",
+    "cares_about": [
+      "赵无极"
+    ],
+    "fears": [
+      "赵无极有事"
+    ],
+    "bottom_line": "忠诚",
+    "relationships": {
+      "亲近": [
+        "赵无极"
+      ],
+      "冲突": [
+        "邢飞扬"
+      ]
+    },
+    "trust_pattern": "信任赵无极",
+    "conflict_style": "正面硬打",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "忠勇部下型"
+  },
+  "char_027": {
+    "name": "沙万城",
+    "role": "配角（叛徒）",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "出卖赵无极的墙头草",
+    "traits": [
+      "投机",
+      "不忠",
+      "聪明"
+    ],
+    "decision_style": "见风使舵",
+    "risk_attitude": "极度保守",
+    "cares_about": [
+      "自己"
+    ],
+    "fears": [
+      "失去靠山"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "亲近": [
+        "诚亲王"
+      ],
+      "冲突": [
+        "原上司赵无极"
+      ]
+    },
+    "trust_pattern": "利益导向",
+    "conflict_style": "背后捅刀",
+    "consistency_issues": [
+      "一致于投机本性"
+    ],
+    "breaking_point": "无底线",
+    "behavioral_model": "投机背叛型"
+  },
+  "char_028": {
+    "name": "魏若文",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "诚亲王的忠心鹰犬",
+    "traits": [
+      "精明",
+      "忠心"
+    ],
+    "decision_style": "按照诚亲王命令行事",
+    "risk_attitude": "保守",
+    "cares_about": [
+      "诚亲王"
+    ],
+    "fears": [
+      "办事不利"
+    ],
+    "bottom_line": "忠于诚亲王",
+    "relationships": {
+      "亲近": [
+        "诚亲王"
+      ],
+      "冲突": [
+        "赵无极",
+        "邢飞扬"
+      ]
+    },
+    "trust_pattern": "完全信任诚亲王",
+    "conflict_style": "正面硬打",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "除非诚亲王崩溃",
+    "behavioral_model": "忠诚部下型"
+  },
+  "char_029": {
+    "name": "韦光正",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "杀人如麻的诚亲王麾下将领",
+    "traits": [
+      "残忍",
+      "凶狠"
+    ],
+    "decision_style": "服从命令",
+    "risk_attitude": "冒险",
+    "cares_about": [
+      "杀戮"
+    ],
+    "fears": [
+      "无"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "亲近": [
+        "诚亲王"
+      ],
+      "冲突": [
+        "邢飞扬"
+      ]
+    },
+    "trust_pattern": "不适用",
+    "conflict_style": "正面硬打",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "只有面临死亡可能退缩",
+    "behavioral_model": "暴力打手型"
+  },
+  "char_030": {
+    "name": "尔朱秀媛（南宫媛）",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被拯救后选择追随的西域公主",
+    "traits": [
+      "聪明",
+      "善良",
+      "坚韧"
+    ],
+    "decision_style": "基于情感与理智",
+    "risk_attitude": "保守但有决心",
+    "cares_about": [
+      "邢飞扬"
+    ],
+    "fears": [
+      "再次落入魔爪"
+    ],
+    "bottom_line": "不背叛救命恩人",
+    "relationships": {
+      "亲近": [
+        "邢飞扬"
+      ],
+      "冲突": [
+        "赵无极"
+      ]
+    },
+    "trust_pattern": "信任邢飞扬",
+    "conflict_style": "无，依赖邢飞扬保护",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "无法忍受再次被卖才可能背叛",
+    "behavioral_model": "被拯救后忠诚型"
+  },
+  "char_031": {
+    "name": "吴知非",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "痛失爱女的哀伤父亲",
+    "traits": [
+      "正直",
+      "慈爱",
+      "善良"
+    ],
+    "decision_style": "情感驱动",
+    "risk_attitude": "保守",
+    "cares_about": [
+      "女儿"
+    ],
+    "fears": [
+      "失去女儿"
+    ],
+    "bottom_line": "不违背医德",
+    "relationships": {
+      "亲近": [
+        "吴悦"
+      ],
+      "冲突": [
+        "杂役"
+      ]
+    },
+    "trust_pattern": "相信好人",
+    "conflict_style": "不适用",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "女儿死后可随崩溃",
+    "behavioral_model": "善良医者型"
+  },
+  "char_032": {
+    "name": "云霓/云裳",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被赵无极驯服的孪生姐妹",
+    "traits": [
+      "顺从",
+      "懦弱"
+    ],
+    "decision_style": "被命令",
+    "risk_attitude": "被动",
+    "cares_about": [
+      "保命"
+    ],
+    "fears": [
+      "赵无极的惩罚"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "亲近": [
+        "赵无极（被迫）"
+      ],
+      "冲突": [
+        "无"
+      ]
+    },
+    "trust_pattern": "不适用",
+    "conflict_style": "无",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "遇到更强者时可能倒戈（如对诚亲王）",
+    "behavioral_model": "被驯服者型"
+  },
+  "char_033": {
+    "name": "白妙儿",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被轮奸至死的无辜女子",
+    "traits": [
+      "柔媚",
+      "求生欲强"
+    ],
+    "decision_style": "服从",
+    "risk_attitude": "被动",
+    "cares_about": [
+      "自己"
+    ],
+    "fears": [
+      "死亡"
+    ],
+    "bottom_line": "无",
+    "relationships": {
+      "亲近": [
+        "无"
+      ],
+      "冲突": [
+        "诚亲王"
+      ]
+    },
+    "trust_pattern": "不适用",
+    "conflict_style": "无",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "已死",
+    "behavioral_model": "被动受害型"
+  },
+  "char_034": {
+    "name": "大黑/二黑",
+    "role": "配角（动物）",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "被用来折磨女性的两条巨獒",
+    "traits": [
+      "凶猛",
+      "易训"
+    ],
+    "decision_style": "不适用",
+    "risk_attitude": "不适用",
+    "cares_about": [
+      "交配"
+    ],
+    "fears": [
+      "恐惧"
+    ],
+    "bottom_line": "不适用",
+    "relationships": {
+      "亲近": [
+        "训练者"
+      ],
+      "冲突": [
+        "被折磨者"
+      ]
+    },
+    "trust_pattern": "不适用",
+    "conflict_style": "不适用",
+    "consistency_issues": [
+      "不适用"
+    ],
+    "breaking_point": "不适用",
+    "behavioral_model": "动物工具型"
+  },
+  "char_035": {
+    "name": "小牛",
+    "role": "配角（动物）",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "邢飞扬极具灵性的坐骑",
+    "traits": [
+      "神骏",
+      "通人性",
+      "忠诚"
+    ],
+    "decision_style": "服从主人",
+    "risk_attitude": "不适用",
+    "cares_about": [
+      "主人"
+    ],
+    "fears": [
+      "不适用"
+    ],
+    "bottom_line": "不适用",
+    "relationships": {
+      "亲近": [
+        "邢飞扬"
+      ],
+      "冲突": [
+        "敌人"
+      ]
+    },
+    "trust_pattern": "不适用",
+    "conflict_style": "逃跑",
+    "consistency_issues": [
+      "不适用"
+    ],
+    "breaking_point": "不适用",
+    "behavioral_model": "忠诚动物型"
+  },
+  "char_036": {
+    "name": "尚老汉",
+    "role": "配角",
+    "current_location": "未知",
+    "emotional_state": "平静",
+    "reader_tag": "收留苏玲等人的善良村民",
+    "traits": [
+      "朴实",
+      "胆小但善良"
+    ],
+    "decision_style": "帮人帮到底",
+    "risk_attitude": "保守",
+    "cares_about": [
+      "家人",
+      "村民"
+    ],
+    "fears": [
+      "惹祸上身"
+    ],
+    "bottom_line": "不主动害人",
+    "relationships": {
+      "亲近": [
+        "邢飞扬",
+        "苏玲等人"
+      ],
+      "冲突": [
+        "诚亲王"
+      ]
+    },
+    "trust_pattern": "相信好人",
+    "conflict_style": "无",
+    "consistency_issues": [
+      "一致"
+    ],
+    "breaking_point": "可能因恐惧而出卖他人",
+    "behavioral_model": "善良村民型"
+  }
+}
