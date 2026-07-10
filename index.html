@@ -2866,34 +2866,51 @@ ${dimSubList}
 - ${rc.label}触发阈值：维度分 < ${rc.threshold} 即标记为问题
 - 严审必须逐项检查全部子项；衡审检查核心子项；宽审从大局评估
 
+**你必须输出具体的修改建议（suggestions数组），不能为空！**
+每条建议必须包含：原文位置(location)、原文片段(current_text)、修改方案(proposed_change)、理由(reasoning)。
+
 请输出 JSON 格式（只输出JSON，不要其他文字）：
 {
-  "scores": [维度1分, 维度2分, ..., 维度13分],
-  "overall": 综合评分(1-100),
+  "score": 综合评分(0-100),
+  "scores": [13个维度的分数，每个1-10],
   "comment": "简短评语（指出最核心的1-2个问题或亮点）",
-  "strengths": ["优点1（附例子）", "优点2"],
-  "weaknesses": ["不足1（附例子）", "不足2"],
-  "improvements": ["改进建议1（具体可操作）", "改进建议2"]
+  "suggestions": [
+    {
+      "type": "rewrite|polish",
+      "location": "原文位置描述（如'第3段第2句'或具体上下文，限15字内）",
+      "current_text": "需要修改的原文片段",
+      "proposed_change": "建议修改后的文本",
+      "reasoning": "为什么这样改（一句话）",
+      "expected_improvement": {"dimension": "涉及的维度名", "delta": "+N"}
+    }
+  ],
+  "strengths": ["优点1（附例子）"],
+  "weaknesses": ["不足1（附例子）"],
+  "improvements": ["改进建议描述"]
 }`;
 
-  const userPrompt = `请审查以下第${chNum}章内容：\n\n${content.substring(0,12000)}`;
+  const userPrompt = `请审查以下第${chNum}章内容：\n\n${content.substring(0,12000)}\n\n请给出评分和至少2条具体的修改建议（含原文和修改方案）。`;
 
   try {
     const reply = await callLLM(
       [{role:'system', content:systemPrompt}, {role:'user', content:userPrompt}],
-      {max_tokens:4096, temperature}
+      {max_tokens:8192, temperature}
     );
 
     // 解析JSON
     const jsonMatch = reply.match(/\{[\s\S]*\}/);
     if(!jsonMatch) throw new Error('未找到JSON');
-    return JSON.parse(jsonMatch[0]);
+    const result = JSON.parse(jsonMatch[0]);
+    // 确保有suggestions字段
+    if(!result.suggestions) result.suggestions = [];
+    return result;
   } catch(e){
-    // 降级：返回默认评分
+    // 降级：返回默认评分+空建议
     return {
+      score: 50,
       scores: DIM_KEYS.map(()=>5),
-      overall: 50,
       comment: '审查异常: '+e.message,
+      suggestions: [],
       strengths: [],
       weaknesses: [],
       improvements: []
