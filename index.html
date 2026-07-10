@@ -2387,7 +2387,7 @@ renderers.characters = function(){
 };
 
 // ═══════ 审查室页面 ═══════
-// UX参照原项目：三审评分并排→每条建议展开卡片+Apply按钮→S1违规原文高亮→定稿按钮
+// 完整工作流：编辑器(左) + 建议卡片(右) + 保存到磁盘 + 版本历史
 let _reviewInProgress = false;
 renderers.review = function(){
   const main = document.getElementById('page-review');
@@ -2399,253 +2399,344 @@ renderers.review = function(){
   const chapters = p.chapters||[];
   const cfg = DB.config || {};
   const qg = cfg.qualityGate || {passThreshold:75,reviseThreshold:50,maxIterations:3,strictMinDim:5};
+  const lr = p._lastReview || null;
+  const reviewing = _reviewInProgress && p._reviewChapter;
 
-  const lr = p._lastReview || null; // lr = lastReview
+  // 获取当前选中的章节号（用于切换章节时保持选中状态）
+  const savedChNum = p._reviewSelectedCh || (chapters.length>0?chapters[chapters.length-1].number:1);
+  const currentCh = chapters.find(c=>c.number===savedChNum) || chapters[chapters.length-1];
 
   let html = `<div class="page-title">🔍 审查室</div>
-    <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px">🔒 当前项目：${locked.name}（${chapters.length}章）</div>`;
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">🔒 ${locked.name}</div>`;
 
   if(!chapters.length){
-    html += `<div class="card"><div class="card-title">📖 无章节</div><div class="empty-state"><p>请先在写作台撰写章节</p></div></div>`;
+    html += `<div class="card"><div class="empty-state"><p>请先在写作台撰写章节</p></div></div>`;
     main.innerHTML = html; side.innerHTML=''; return;
   }
 
-  // ─── 选择章节 ───
-  html += `<div class="card"><div class="card-title">📄 选择章节</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <select id="reviewChSelect" style="flex:1;min-width:120px">
-        ${chapters.map(ch=>`<option value="${ch.number}">第${ch.number}章${ch.title?' - '+ch.title:''}${ch.status==='approved'?' ✅':' 📝'}</option>`).join('')}
-      </select>
-      <span style="font-size:12px;color:var(--text-dim)">共 ${chapters.length} 章</span>
-    </div>
+  // ─── 顶部：选择章节 + 审查流水线 + 启动按钮 ───
+  html += `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+    <select id="reviewChSelect" onchange="onReviewChChange()" style="width:140px">
+      ${chapters.map(ch=>`<option value="${ch.number}" ${ch.number===savedChNum?'selected':''}>第${ch.number}章${ch.status==='approved'?' ✅':' 📝'}</option>`).join('')}
+    </select>
+    <button class="btn btn-primary btn-sm" id="btnStartReview" ${_reviewInProgress?'disabled':''}>${_reviewInProgress?'⏳ 审查中...':'🔍 审查'}</button>
+    <button class="btn btn-success btn-sm" onclick="saveReviewDraft(${savedChNum})">💾 保存草稿</button>
+    <button class="btn btn-success btn-sm" onclick="approveChapter(${savedChNum})" ${!currentCh||currentCh.status==='approved'?'disabled':''}>✅ 定稿</button>
   </div>`;
 
-  // ─── 审查流水线状态 ───
-  const reviewing = _reviewInProgress && p._reviewChapter;
-  const STEPS = [
-    {label:'S1',icon:'⚙️',key:'s1'},{label:'严审',icon:'🔴',key:'s2_strict'},
-    {label:'衡审',icon:'🟡',key:'s2_moderate'},{label:'宽审',icon:'🟢',key:'s2_lenient'},
-    {label:'选票',icon:'📮',key:'ballot'},{label:'夹逼',icon:'🔬',key:'squeeze'},
-    {label:'投票',icon:'🗳️',key:'vote'},{label:'门禁',icon:'🚪',key:'gate'},
-  ];
-  html += `<div class="card"><div class="card-title">🔄 审查流水线</div>
-    <div style="display:flex;gap:4px;flex-wrap:wrap">
-      ${STEPS.map((s,i)=>{
-        const done=lr?._steps?.[s.key]; const act=reviewing&&p._reviewStep===i;
-        return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 7px;border-radius:5px;background:${act?'rgba(0,212,255,.12)':done?'rgba(46,213,115,.1)':'rgba(255,255,255,.03)'};border:1px solid ${act?'var(--cyan)':done?'var(--green)':'var(--border)'}">
-          <span style="font-size:13px">${done?'✅':act?'⏳':s.icon}</span>
-          <span style="font-size:8px;color:${act?'var(--cyan)':done?'var(--green)':'var(--text-dim)'}">${s.label}</span>
-        </div>`;
-      }).join('')}
-    </div>
-    ${reviewing?`<div style="margin-top:4px;font-size:11px;color:var(--cyan)">⏳ 审查第${p._reviewChapter}章（${p._reviewStep+1}/${STEPS.length}）</div>`:''}
-  </div>`;
+  // 流水线指示器
+  html += `<div style="display:flex;gap:3px;margin-bottom:8px;flex-wrap:wrap">`;
+  const STEPS=[{l:'S1',k:'s1'},{l:'严审',k:'s2_strict'},{l:'衡审',k:'s2_moderate'},{l:'宽审',k:'s2_lenient'},{l:'选票',k:'ballot'},{l:'夹逼',k:'squeeze'},{l:'投票',k:'vote'},{l:'门禁',k:'gate'}];
+  STEPS.forEach((s,i)=>{
+    const done=lr?._steps?.[s.k]; const act=reviewing&&p._reviewStep===i;
+    html += `<div style="display:flex;align-items:center;gap:2px;padding:2px 6px;border-radius:4px;font-size:10px;background:${act?'rgba(0,212,255,.12)':done?'rgba(46,213,115,.1)':'rgba(255,255,255,.03)'};border:1px solid ${act?'var(--cyan)':done?'var(--green)':'var(--border)'};color:${act?'var(--cyan)':done?'var(--green)':'var(--text-dim)'}">
+      ${done?'✅':act?'⏳':'○'} ${s.l}</div>`;
+  });
+  html += `</div>`;
 
-  html += `<button class="btn btn-primary btn-block" id="btnStartReview" ${_reviewInProgress?'disabled':''}>
-    ${_reviewInProgress?'⏳ 审查中...':'🔍 启动审查'}
-  </button>`;
+  // ─── 左右双栏：编辑器(左) + 建议(右) ───
+  html += `<div class="row" style="gap:8px;height:calc(100vh - 340px);min-height:350px">
+    <div class="col" style="display:flex;flex-direction:column;min-width:0">`;
 
-  // ─── 审查结果 ───
-  if(lr){
-    const ch = chapters.find(c=>c.number===lr.chapter);
-    html += `<div class="card" style="margin-top:10px"><div class="card-title">📊 审查结果 — 第${lr.chapter}章${ch?.title?' '+ch.title:''}</div>`;
+  // 左栏：章节编辑器
+  const chContent = currentCh?currentCh.content||'':'（空）';
+  html += `<div class="card" style="flex:1;display:flex;flex-direction:column;margin-bottom:0;padding:10px">
+      <div class="card-title" style="margin-bottom:4px;font-size:13px">📝 第${savedChNum}章 编辑器</div>
+      <textarea id="reviewEditor" style="flex:1;width:100%;resize:none;font-size:13px;line-height:1.7;font-family:inherit;min-height:200px">${chContent.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+    </div>`;
 
-    // 三审评分 + 加权 + 门禁
-    const rKeys=[{k:'strict',l:'🔴 严审',c:'var(--accent)'},{k:'moderate',l:'🟡 衡审',c:'var(--orange)'},{k:'lenient',l:'🟢 宽审',c:'var(--green)'}];
-    html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">`;
+  // 左栏底部：三审评分 + 门禁
+  if(lr && lr.chapter===savedChNum){
+    const rKeys=[{k:'strict',l:'🔴严',c:'var(--accent)'},{k:'moderate',l:'🟡衡',c:'var(--orange)'},{k:'lenient',l:'🟢宽',c:'var(--green)'}];
+    html += `<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">`;
     rKeys.forEach(r=>{
       const s=lr.reviewers?.[r.k]?.score||0;
-      html += `<div style="text-align:center;padding:4px 10px;background:rgba(255,255,255,.03);border-radius:6px;flex:1;min-width:60px">
-        <div style="font-size:8px;color:var(--text-dim)">${r.l}</div>
-        <div style="font-size:18px;font-weight:700;color:${r.c}">${s.toFixed(0)}</div></div>`;
+      html += `<div style="text-align:center;padding:2px 8px;background:rgba(255,255,255,.03);border-radius:4px;font-size:10px">
+        <span style="color:${r.c};font-weight:600">${r.l}</span> ${s.toFixed(0)}</div>`;
     });
-    html += `<div style="text-align:center;padding:4px 10px;background:rgba(0,212,255,.1);border-radius:6px;flex:1;min-width:60px">
-      <div style="font-size:8px;color:var(--text-dim)">加权</div>
-      <div style="font-size:20px;font-weight:700;color:var(--cyan)">${(lr.finalScore||0).toFixed(0)}</div></div>`;
-    const vm={pass:['✅','已通过','var(--green)'],revise:['🔄','需修订','var(--orange)'],manual:['⚠️','需人工','var(--accent)']};
-    const [vi,vt,vc]=vm[lr.verdict]||['❓','?','var(--text-dim)'];
-    html += `<div style="text-align:center;padding:4px 10px;background:rgba(46,213,115,.08);border-radius:6px;flex:1;min-width:60px">
-      <div style="font-size:8px;color:var(--text-dim)">门禁</div>
-      <div style="font-size:16px;font-weight:700;color:${vc}">${vi} ${vt}</div></div>`;
+    const vm={pass:['✅通过','var(--green)'],revise:['🔄修订','var(--orange)'],manual:['⚠️人工','var(--accent)']};
+    const [vt,vc]=vm[lr.verdict]||['?','var(--text-dim)'];
+    html += `<div style="text-align:center;padding:2px 8px;background:rgba(0,212,255,.08);border-radius:4px;font-size:10px">
+      加权 <strong style="color:var(--cyan)">${(lr.finalScore||0).toFixed(0)}</strong></div>
+      <div style="text-align:center;padding:2px 8px;background:rgba(46,213,115,.08);border-radius:4px;font-size:10px">
+      门禁 <strong style="color:${vc}">${vt}</strong></div>`;
     html += `</div>`;
+    // 严审短板
     if(lr.hasMinDimIssue&&lr.minDimIssues?.length){
-      html += `<div style="padding:4px 8px;background:rgba(233,96,96,.1);border-radius:4px;margin-bottom:6px;font-size:11px">
-        <span style="color:var(--accent);font-weight:600">🔴 严审短板：</span>
-        ${lr.minDimIssues.map(m=>`${m.dimension}(${m.score}/10)`).join('、')}</div>`;
+      html += `<div style="margin-top:2px;font-size:10px;color:var(--accent)">🔴 ${lr.minDimIssues.map(m=>m.dimension+'('+m.score+'/10)').join('、')}</div>`;
     }
+  }
 
-    // ═══ 三审查官建议（逐个展开+Apply按钮）═══
-    if(lr.allSuggestions?.length){
-      html += `<div style="margin-top:6px"><div class="card-title" style="font-size:13px">💡 修改建议（点击展开查看，可逐条应用）</div>`;
-      lr.allSuggestions.forEach((s,i)=>{
-        const rColor = s.reviewer==='strict'?'var(--accent)':s.reviewer==='moderate'?'var(--orange)':'var(--green)';
-        const rLabel = s.reviewer==='strict'?'🔴 严审':s.reviewer==='moderate'?'🟡 衡审':'🟢 宽审';
-        const sugId = `sug_${lr.chapter}_${i}`;
-        html += `<details style="margin:3px 0;padding:4px 8px;border-radius:4px;background:rgba(255,255,255,.02);border-left:2px solid ${rColor}">
-          <summary style="cursor:pointer;font-size:12px">
-            <span style="color:${rColor}">${rLabel}</span>
-            ${s.dimension?`<span style="color:var(--text-dim)">[${s.dimension}]</span>`:''}
-            ${(s.proposed_change||s.description||'').substring(0,50)}${(s.proposed_change||'').length>50?'...':''}
-          </summary>
-          <div style="margin-top:4px;font-size:12px;line-height:1.6">
-            ${s.location?`<div style="color:var(--orange);font-size:11px">📍 位置: ${s.location}</div>`:''}
-            ${s.current_text?`<div style="padding:4px;background:rgba(233,96,96,.08);border-radius:3px;margin:4px 0"><span style="color:var(--accent)">原文:</span> ${s.current_text}</div>`:''}
-            ${s.proposed_change?`<div style="padding:4px;background:rgba(46,213,115,.08);border-radius:3px;margin:4px 0"><span style="color:var(--green)">建议修改:</span> ${s.proposed_change}</div>`:''}
-            ${s.description?`<div style="padding:4px;background:rgba(255,255,255,.03);border-radius:3px;margin:4px 0;color:var(--text-dim)">${s.description}</div>`:''}
-            ${s.reasoning?`<div style="font-size:11px;color:var(--text-dim);margin-top:2px">💡 ${s.reasoning}</div>`:''}
-            <button class="btn btn-sm btn-primary" style="margin-top:6px" data-sug-id="${sugId}" onclick="applySuggestion(${lr.chapter},${i})">📌 应用此建议</button>
-          </div>
-        </details>`;
-      });
-      html += `</div>`;
+  html += `</div><div class="col" style="min-width:200px;max-width:360px;display:flex;flex-direction:column">`;
 
-      // 定稿按钮
-      html += `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-success" id="btnApproveChapter" onclick="approveChapter(${lr.chapter})">✅ 同意结果，定稿此章</button>
-        <button class="btn btn-secondary" id="btnReReview" onclick="startReview('${locked.name}',${lr.chapter})">🔄 重新审查</button>
-      </div>`;
-    } else if(lr.reviewers){
-      html += `<div style="margin-top:8px"><p style="font-size:12px;color:var(--text-dim)">三审查官已完成评分，但未输出具体修改建议。</p>
-        <button class="btn btn-success" onclick="approveChapter(${lr.chapter})">✅ 直接定稿</button>
-      </div>`;
-    }
+  // 右栏：修改建议
+  html += `<div class="card" style="flex:1;display:flex;flex-direction:column;margin-bottom:0;padding:10px;overflow-y:auto">
+      <div class="card-title" style="margin-bottom:4px;font-size:13px">💡 修改建议${lr&&lr.chapter===savedChNum&&lr.allSuggestions?` (${lr.allSuggestions.length}条)`:' (暂无)'}</div>`;
 
-    // S1违规原文高亮
-    if(lr.s1Results?.length){
-      const flagged = lr.s1Results.filter(r=>r.flagged);
-      if(flagged.length){
-        html += `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:var(--text-dim)">⚙️ S1机械闸 — ${flagged.length}项标记</summary><div style="margin-top:4px">`;
-        flagged.forEach(r=>{
-          const sev=r.severity||'WARN'; const sevIcon=sev==='BLOCK'?'🚫':'⚠️';
-          html += `<div style="padding:4px 8px;margin:3px 0;background:rgba(233,96,96,.06);border-radius:4px;border-left:2px solid var(--accent);font-size:11px">
-            <span>${sevIcon}</span> <strong>${r.rule}</strong>
-            ${r.detail?`<div style="color:var(--text-dim);margin-top:2px">${r.detail}</div>`:''}
-            ${r.matchedText?`<div style="background:rgba(233,96,96,.08);padding:2px 6px;border-radius:3px;margin-top:2px;font-size:11px;color:var(--accent)">原文: …${r.matchedText}…</div>`:''}
-          </div>`;
-        });
-        html += `</div></details>`;
-      }
-    }
-
-    // 13维度详情
-    if(lr.dimScores?.length){
-      html += `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:11px;color:var(--text-dim)">📋 13维度评分</summary><div style="margin-top:4px">`;
-      lr.dimScores.forEach((d,i)=>{
-        const w=Math.min(100,Math.max(5,d.average));
-        html += `<div style="margin-bottom:2px"><div style="display:flex;justify-content:space-between;font-size:9px"><span>${DIM_NAMES[i]}</span><span>${d.average.toFixed(0)}</span></div>
-          <div style="height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
-            <div style="height:100%;width:${w}%;background:${d.average>=qg.strictMinDim*10?'linear-gradient(90deg,var(--cyan),var(--purple))':'var(--accent)'};border-radius:2px"></div></div></div>`;
-      });
-      html += `</div></details>`;
-    }
-
-    // 三审评语
-    html += `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">`;
-    rKeys.forEach(r=>{
-      const rv=lr.reviewers?.[r.k];
-      if(rv?.comment) html += `<div style="flex:1;min-width:100px;padding:4px 6px;background:rgba(255,255,255,.03);border-radius:4px;font-size:10px;border-left:2px solid ${r.c}">
-        <div style="font-weight:600;color:${r.c}">${r.l}</div><div style="color:var(--text-dim)">${rv.comment.substring(0,80)}</div></div>`;
+  if(lr && lr.chapter===savedChNum && lr.allSuggestions?.length){
+    lr.allSuggestions.forEach((s,i)=>{
+      const rColor=s.reviewer==='strict'?'var(--accent)':s.reviewer==='moderate'?'var(--orange)':'var(--green)';
+      const rLabel=s.reviewer==='strict'?'🔴':s.reviewer==='moderate'?'🟡':'🟢';
+      const alreadyApplied = lr.appliedSuggestions?.some(a=>a.index===i);
+      html += `<details style="margin:2px 0;padding:3px 6px;border-radius:3px;background:${alreadyApplied?'rgba(46,213,115,.08)':'rgba(255,255,255,.02)'};border-left:2px solid ${rColor}">
+        <summary style="cursor:pointer;font-size:11px">
+          ${alreadyApplied?'✅':rLabel} ${s.dimension||'建议'}
+          <span style="color:var(--text-dim);font-size:10px">${(s.proposed_change||'').substring(0,30)}${(s.proposed_change||'').length>30?'...':''}</span>
+        </summary>
+        <div style="margin-top:3px;font-size:11px;line-height:1.5">
+          ${s.current_text?`<div style="background:rgba(233,96,96,.08);padding:3px 5px;border-radius:2px;margin:2px 0;font-size:10px"><span style="color:var(--accent)">原文:</span> ${s.current_text}</div>`:''}
+          ${s.proposed_change?`<div style="background:rgba(46,213,115,.08);padding:3px 5px;border-radius:2px;margin:2px 0;font-size:10px"><span style="color:var(--green)">修改:</span> ${s.proposed_change}</div>`:''}
+          ${s.reasoning?`<div style="font-size:10px;color:var(--text-dim);margin:2px 0">💡 ${s.reasoning}</div>`:''}
+          ${alreadyApplied?'<span style="color:var(--green);font-size:10px">✅ 已应用</span>'
+            :`<button class="btn btn-sm btn-primary" style="font-size:10px;padding:2px 6px;margin-top:2px" onclick="applyReviewSuggestion(${savedChNum},${i})">📌 应用</button>`}
+        </div>
+      </details>`;
     });
-    html += `</div></div>`;
-
-    // 质量趋势
-    if(p.qualityHistory?.length>1){
-      html += `<div class="card"><div class="card-title">📈 质量趋势</div>
-        <div style="height:80px"><canvas id="reviewChart"></canvas></div></div>`;
-    }
   } else {
-    html += `<div class="card"><div class="card-title">📊 无审查记录</div>
-      <div class="empty-state"><p>选择一个章节，点击「启动审查」让三审查官评审</p></div></div>`;
+    html += `<div style="font-size:11px;color:var(--text-dim);padding:10px;text-align:center">点击「审查」获取三审建议</div>`;
+  }
+  html += `</div></div></div>`; // row end
+
+  // ─── 版本历史（可折叠） ───
+  const rHist = p._reviewHistory||{};
+  const chHist = rHist[savedChNum]||{drafts:[],reviews:[]};
+  html += `<div class="card" style="margin-top:6px">
+    <details>
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--text-dim)">📚 版本历史 (${chHist.drafts.length}次草稿, ${chHist.reviews.length}次审查)</summary>
+      <div style="margin-top:4px;max-height:180px;overflow-y:auto">`;
+  // 起草稿记录
+  if(chHist.drafts.length){
+    chHist.drafts.slice().reverse().forEach((d,i)=>{
+      const idx = chHist.drafts.length - i;
+      html += `<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px;display:flex;justify-content:space-between">
+        <span>📝 v${idx} — ${new Date(d.time).toLocaleString()}</span>
+        <span style="color:var(--text-dim)">${(d.applied||[]).join('、')}</span>
+      </div>`;
+    });
+  }
+  // 审查记录
+  if(chHist.reviews.length){
+    chHist.reviews.slice().reverse().forEach((r,i)=>{
+      html += `<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px;display:flex;justify-content:space-between">
+        <span>🔍 审查 — ${new Date(r.time).toLocaleString()}</span>
+        <span style="color:var(--cyan)">${r.score}分 ${r.verdict}</span>
+      </div>`;
+    });
+  }
+  if(!chHist.drafts.length && !chHist.reviews.length){
+    html += `<div style="font-size:10px;color:var(--text-dim);padding:4px">暂无版本记录</div>`;
+  }
+  html += `</div></details></div>`;
+
+  // S1结果
+  if(lr && lr.chapter===savedChNum && lr.s1Results?.filter(r=>r.flagged).length){
+    const flagged=lr.s1Results.filter(r=>r.flagged);
+    html += `<div class="card" style="margin-top:4px;padding:8px">
+      <details><summary style="cursor:pointer;font-size:11px;color:var(--text-dim)">⚙️ S1 机械闸 (${flagged.length}项)</summary><div style="margin-top:3px">`;
+    flagged.forEach(r=>{
+      html += `<div style="padding:2px 0;font-size:10px;border-bottom:1px solid rgba(255,255,255,.03)">
+        <span style="color:var(--orange)">⚠️ ${r.rule}</span>
+        ${r.detail?`<span style="color:var(--text-dim)"> — ${r.detail}</span>`:''}
+      </div>`;
+    });
+    html += `</div></details></div>`;
   }
 
   main.innerHTML = html;
-  document.getElementById('btnStartReview')?.addEventListener('click', async ()=>{
-    const chNum = parseInt(document.getElementById('reviewChSelect').value);
-    if(!chNum||_reviewInProgress) return;
-    await startReview(locked.name, chNum);
+
+  // 事件绑定
+  document.getElementById('btnStartReview')?.addEventListener('click',async()=>{
+    const n=parseInt(document.getElementById('reviewChSelect').value);
+    if(!n||_reviewInProgress)return; await startReview(locked.name,n);
   });
 
   // 右侧面板
   let sideHtml = `<div class="card"><div class="card-title">📖 ${locked.name}</div>
-    <div style="font-size:11px;color:var(--text-dim);line-height:1.7">
-      <div>📄 章节: ${chapters.length}章</div>
-      <div>📊 审查: ${p.qualityHistory?.length||0}次</div>
-      <div>⚙️ 通过≥${qg.passThreshold} / 修订≥${qg.reviseThreshold}</div>
+    <div style="font-size:11px;line-height:1.6">
+      <div style="color:var(--text-dim)">📄 ${chapters.length}章 · 已审查 ${p.qualityHistory?.length||0}次</div>
+      <div style="color:var(--text-dim)">⚙️ ≥${qg.passThreshold}通过 · ≥${qg.reviseThreshold}修订</div>
     </div>
   </div>
-  <div class="card"><div class="card-title">⚡ 快捷</div>
-    <button class="btn btn-secondary btn-sm btn-block" style="margin-bottom:3px" onclick="(()=>{const s=document.getElementById('reviewChSelect');if(!s)return;s.value='${chapters.length}';document.getElementById('btnStartReview')?.click()})()">🔍 审查最新章</button>
-    <button class="btn btn-secondary btn-sm btn-block" onclick="(()=>{const s=document.getElementById('reviewChSelect');if(!s)return;s.value='1';document.getElementById('btnStartReview')?.click()})()">🔍 审查第1章</button>
-    <button class="btn btn-success btn-sm btn-block" style="margin-top:3px" onclick="approveChapter(parseInt(document.getElementById('reviewChSelect')?.value))" ${!lr?'disabled':''}>✅ 定稿此章</button>
+  <div class="card"><div class="card-title">⚡ 操作</div>
+    <button class="btn btn-sm btn-secondary btn-block" style="margin-bottom:3px" onclick="onReviewChChange()">🔄 刷新编辑器</button>
+    <button class="btn btn-sm btn-primary btn-block" style="margin-bottom:3px" onclick="saveReviewDraft(${savedChNum})">💾 保存草稿</button>
+    <button class="btn btn-sm btn-success btn-block" onclick="approveChapter(${savedChNum})" ${!currentCh||currentCh.status==='approved'?'disabled':''}>✅ 定稿此章</button>
   </div>`;
-  side.innerHTML = sideHtml;
 
-  // 图表
-  if(p.qualityHistory?.length>1){
-    setTimeout(()=>{
-      const c=document.getElementById('reviewChart'); if(!c) return;
-      c.width=c.parentElement.clientWidth; c.height=80;
-      try{new Chart(c,{type:'line',data:{
-        labels:p.qualityHistory.map(d=>'Ch'+d.chapter),
-        datasets:[{label:'评分',data:p.qualityHistory.map(d=>d.final_score),borderColor:'var(--cyan)',tension:.3,pointRadius:2,
-          pointBackgroundColor:p.qualityHistory.map(d=>d.final_score>=qg.passThreshold?'var(--green)':d.final_score>=qg.reviseThreshold?'var(--orange)':'var(--accent)')
-        },{label:'通过线',data:p.qualityHistory.map(()=>qg.passThreshold),borderColor:'rgba(46,213,115,.3)',borderDash:[4,4],pointRadius:0}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-          scales:{x:{ticks:{color:'#556677',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}},
-                  y:{min:0,max:100,ticks:{color:'#556677',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}}}}});}catch(e){}
-    },50);
+  if(currentCh && currentCh.status==='approved'){
+    sideHtml += `<div class="card"><div style="font-size:11px;color:var(--green);text-align:center">✅ 此章已定稿</div></div>`;
   }
+
+  // 夹逼结果简表
+  if(lr && lr.chapter===savedChNum && lr.squeezeResult?.winner){
+    const sq=lr.squeezeResult;
+    sideHtml += `<div class="card"><div class="card-title" style="font-size:11px">🔬 夹逼优选</div>
+      <div style="font-size:10px;color:var(--text-dim);line-height:1.5">
+        <div>质量分: <strong style="color:var(--cyan)">${(sq.winner.quality*100).toFixed(0)}%</strong></div>
+        <div>置信度: <strong>${(sq.confidence*100).toFixed(0)}%</strong></div>
+        <div style="font-size:9px">严审:${(sq.winner.strict*100).toFixed(0)}% 衡审:${(sq.winner.moderate*100).toFixed(0)}% 宽审:${(sq.winner.lenient*100).toFixed(0)}%</div>
+      </div>
+    </div>`;
+  }
+
+  side.innerHTML = sideHtml;
 };
 
-// ─── 定稿章节 ───
-function approveChapter(chNum){
-  const locked = getLockedProject();
-  if(!locked){toast('请先锁定项目','error');return}
-  const p = DB.projects[locked.name];
-  if(!p){toast('项目不存在','error');return}
+// ─── 切换章节 ───
+function onReviewChChange(){
+  const locked=getLockedProject(); if(!locked)return;
+  const p=DB.projects[locked.name]; if(!p)return;
+  const sel=document.getElementById('reviewChSelect');
+  if(!sel)return;
+  p._reviewSelectedCh = parseInt(sel.value);
+  // 从磁盘加载该章节当前内容到编辑器
+  const chNum = p._reviewSelectedCh;
+  const ch = (p.chapters||[]).find(c=>c.number===chNum);
+  // 检查是否有更新的草稿
+  loadReviewChapterContent(locked.name, chNum);
+  renderers.review();
+}
+
+// ─── 从磁盘读取章节最新内容到编辑器 ───
+async function loadReviewChapterContent(projectName, chNum){
+  const p=DB.projects[projectName]; if(!p) return;
+  // 优先读取草稿（最新草稿）
+  const padded = String(chNum).padStart(3,'0');
+  const rHist = p._reviewHistory||{};
+  const chHist = rHist[chNum]||{drafts:[],reviews:[]};
+  const draftCount = chHist.drafts.length;
+
+  if(draftCount>0){
+    // 从磁盘读取最新草稿
+    const content = await readFileFromDisk(projectName, 'drafts', `revised_第${padded}章_v${draftCount}.md`);
+    if(content){
+      const editor = document.getElementById('reviewEditor');
+      if(editor) editor.value = content;
+      // 同步到内存
+      const ch = (p.chapters||[]).find(c=>c.number===chNum);
+      if(ch) ch.content = content;
+      return;
+    }
+  }
+  // 回退到正式章节
+  const content = await readFileFromDisk(projectName, 'chapters', `chapter_${padded}.md`);
+  if(content){
+    const editor = document.getElementById('reviewEditor');
+    if(editor) editor.value = content;
+    const ch = (p.chapters||[]).find(c=>c.number===chNum);
+    if(ch) ch.content = content;
+  }
+}
+
+// ─── 保存草稿到磁盘 ───
+async function saveReviewDraft(chNum){
+  const locked=getLockedProject(); if(!locked){toast('请先锁定项目','error');return}
+  const p=DB.projects[locked.name]; if(!p)return;
+  const editor=document.getElementById('reviewEditor');
+  if(!editor||!editor.value.trim()){toast('编辑器为空','error');return}
+  const content = editor.value;
   const ch = (p.chapters||[]).find(c=>c.number===chNum);
   if(!ch){toast('章节不存在','error');return}
+
+  // 更新内存
+  ch.content = content;
+
+  // 保存到磁盘
+  const padded = String(chNum).padStart(3,'0');
+  saveFileToDisk(locked.name, 'chapters', `chapter_${padded}.md`, content);
+
+  // 同时也保存版本化草稿（不覆盖旧版本）
+  if(!p._reviewHistory) p._reviewHistory = {};
+  if(!p._reviewHistory[chNum]) p._reviewHistory[chNum] = {drafts:[],reviews:[]};
+  const vNum = p._reviewHistory[chNum].drafts.length + 1;
+  saveFileToDisk(locked.name, 'drafts', `revised_第${padded}章_v${vNum}.md`, content);
+
+  // 记录版本历史
+  p._reviewHistory[chNum].drafts.push({
+    time: Date.now(),
+    version: vNum,
+    applied: ch._pendingApplied ? [...ch._pendingApplied] : [],
+  });
+  ch._pendingApplied = [];
+  saveDB();
+  toast(`✅ 已保存 v${vNum}`);
+  renderers.review();
+}
+
+// ─── 定稿章节 ───
+async function approveChapter(chNum){
+  const locked=getLockedProject(); if(!locked){toast('请先锁定项目','error');return}
+  const p=DB.projects[locked.name]; if(!p)return;
+  const ch=(p.chapters||[]).find(c=>c.number===chNum); if(!ch){toast('章节不存在','error');return}
+
+  // 获取编辑器最新内容
+  const editor=document.getElementById('reviewEditor');
+  if(editor && editor.value.trim()) ch.content = editor.value;
+
   ch.status = 'approved';
   if(p._lastReview && p._lastReview.finalScore) ch.finalScore = p._lastReview.finalScore;
+
+  // 保存到磁盘
+  const padded = String(chNum).padStart(3,'0');
+  saveFileToDisk(locked.name, 'chapters', `chapter_${padded}.md`, ch.content);
+
+  // 记录审查到历史
+  if(!p._reviewHistory) p._reviewHistory = {};
+  if(!p._reviewHistory[chNum]) p._reviewHistory[chNum] = {drafts:[],reviews:[]};
+  if(p._lastReview){
+    p._reviewHistory[chNum].reviews.push({
+      time: Date.now(), score: p._lastReview.finalScore,
+      verdict: p._lastReview.verdict,
+      suggestions: p._lastReview.allSuggestions?.length||0,
+    });
+  }
+
   saveDB();
-  saveFileToDisk(locked.name, 'chapters', `chapter_${String(chNum).padStart(3,'0')}.md`, ch.content);
   toast(`✅ 第${chNum}章已定稿`);
   renderers.review();
 }
 
-// ─── 应用单条建议 ───
-function applySuggestion(chNum, sugIndex){
-  const locked = getLockedProject();
-  if(!locked){toast('请先锁定项目','error');return}
-  const p = DB.projects[locked.name]; if(!p) return;
-  const lr = p._lastReview; if(!lr) return;
-  const sug = lr.allSuggestions?.[sugIndex]; if(!sug) return;
-  const ch = (p.chapters||[]).find(c=>c.number===chNum); if(!ch) return;
+// ─── 应用单条建议（实时替换编辑器内容） ───
+function applyReviewSuggestion(chNum, sugIndex){
+  const locked=getLockedProject(); if(!locked){toast('请先锁定项目','error');return}
+  const p=DB.projects[locked.name]; if(!p)return;
+  const lr=p._lastReview; if(!lr)return;
+  const sug=lr.allSuggestions?.[sugIndex]; if(!sug)return;
+
+  const editor=document.getElementById('reviewEditor');
+  if(!editor){toast('编辑器未加载','error');return}
 
   const proposed = sug.proposed_change || sug.description || '';
   const original = sug.current_text || '';
-  let content = ch.content || '';
+  let content = editor.value || '';
 
   if(original && content.includes(original)){
-    // 替换原文中的匹配文本
+    // 替换原文中的匹配文本（只替换第一个匹配）
     content = content.replace(original, proposed);
-    ch.content = content;
+    editor.value = content;
     toast(`✅ 已应用「${sug.dimension||'修改'}」建议`);
   } else if(original){
-    // 匹配不精确时，追加到章节末尾
-    ch.content += '\n\n<!-- 建议修改:\n' + proposed + '\n-->';
-    toast('⚠️ 未找到精确原文位置，建议已追加到章节末尾','warn');
+    // 匹配不精确时，追加到末尾
+    editor.value += '\n\n<!-- 建议修改:\n' + proposed + '\n-->';
+    toast('⚠️ 未找到精确原文位置，已追加到末尾','warn');
   } else {
-    // 无原文时直接追加
-    ch.content += '\n\n<!-- 建议修改:\n' + proposed + '\n-->';
-    toast('💡 建议已追加到章节末尾');
+    editor.value += '\n\n<!-- 建议修改:\n' + proposed + '\n-->';
+    toast('💡 建议已追加到末尾');
   }
-  saveDB();
-  saveFileToDisk(locked.name, 'chapters', `chapter_${String(chNum).padStart(3,'0')}.md`, ch.content);
 
-  // 更新审查记录
+  // 标记为已应用
   if(!lr.appliedSuggestions) lr.appliedSuggestions = [];
   lr.appliedSuggestions.push({index:sugIndex, dimension:sug.dimension, applied:true});
+
+  // 记录本次待应用的修改（留待保存时写入历史）
+  if(!ch._pendingApplied) ch._pendingApplied = [];
+  ch._pendingApplied.push(sug.dimension||'修改');
+
+  // 自动保存草稿
+  const padded = String(chNum).padStart(3,'0');
+  saveFileToDisk(locked.name, 'chapters', `chapter_${padded}.md`, editor.value);
+
+  saveDB();
   renderers.review();
 }
 
