@@ -2386,7 +2386,8 @@ renderers.characters = function(){
   </div>`;
 };
 
-// ═══════ 审查室页面（完整版：三审→建议→夹逼→投票→应用→门禁） ═══════
+// ═══════ 审查室页面 ═══════
+// UX参照原项目：三审评分并排→每条建议展开卡片+Apply按钮→S1违规原文高亮→定稿按钮
 let _reviewInProgress = false;
 renderers.review = function(){
   const main = document.getElementById('page-review');
@@ -2399,7 +2400,7 @@ renderers.review = function(){
   const cfg = DB.config || {};
   const qg = cfg.qualityGate || {passThreshold:75,reviseThreshold:50,maxIterations:3,strictMinDim:5};
 
-  const lastReview = p._lastReview || null;
+  const lr = p._lastReview || null; // lr = lastReview
 
   let html = `<div class="page-title">🔍 审查室</div>
     <div style="font-size:12px;color:var(--text-dim);margin-bottom:12px">🔒 当前项目：${locked.name}（${chapters.length}章）</div>`;
@@ -2419,203 +2420,142 @@ renderers.review = function(){
     </div>
   </div>`;
 
-  // ─── 审查流程状态（8阶段） ───
+  // ─── 审查流水线状态 ───
   const reviewing = _reviewInProgress && p._reviewChapter;
   const STEPS = [
-    {label:'S1 机械闸',icon:'⚙️',key:'s1','color':'var(--cyan)'},
-    {label:'S2 严审官',icon:'🔴',key:'s2_strict','color':'var(--accent)'},
-    {label:'S2 衡审官',icon:'🟡',key:'s2_moderate','color':'var(--orange)'},
-    {label:'S2 宽审官',icon:'🟢',key:'s2_lenient','color':'var(--green)'},
-    {label:'选票汇总',icon:'📮',key:'ballot','color':'var(--purple)'},
-    {label:'夹逼优选',icon:'🔬',key:'squeeze','color':'var(--cyan)'},
-    {label:'投票确认',icon:'🗳️',key:'vote','color':'var(--yellow)'},
-    {label:'质量门禁',icon:'🚪',key:'gate','color':'var(--green)'},
+    {label:'S1',icon:'⚙️',key:'s1'},{label:'严审',icon:'🔴',key:'s2_strict'},
+    {label:'衡审',icon:'🟡',key:'s2_moderate'},{label:'宽审',icon:'🟢',key:'s2_lenient'},
+    {label:'选票',icon:'📮',key:'ballot'},{label:'夹逼',icon:'🔬',key:'squeeze'},
+    {label:'投票',icon:'🗳️',key:'vote'},{label:'门禁',icon:'🚪',key:'gate'},
   ];
   html += `<div class="card"><div class="card-title">🔄 审查流水线</div>
     <div style="display:flex;gap:4px;flex-wrap:wrap">
       ${STEPS.map((s,i)=>{
-        const done = lastReview?._steps?.[s.key];
-        const active = reviewing && p._reviewStep === i;
-        return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 8px;border-radius:6px;background:${active?'rgba(0,212,255,.12)':done?'rgba(46,213,115,.1)':'rgba(255,255,255,.03)'};border:1px solid ${active?'var(--cyan)':done?'var(--green)':'var(--border)'}">
-          <span style="font-size:14px">${done?'✅':active?'⏳':s.icon}</span>
-          <span style="font-size:9px;color:${active?'var(--cyan)':done?'var(--green)':'var(--text-dim)'}">${s.label}</span>
+        const done=lr?._steps?.[s.key]; const act=reviewing&&p._reviewStep===i;
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 7px;border-radius:5px;background:${act?'rgba(0,212,255,.12)':done?'rgba(46,213,115,.1)':'rgba(255,255,255,.03)'};border:1px solid ${act?'var(--cyan)':done?'var(--green)':'var(--border)'}">
+          <span style="font-size:13px">${done?'✅':act?'⏳':s.icon}</span>
+          <span style="font-size:8px;color:${act?'var(--cyan)':done?'var(--green)':'var(--text-dim)'}">${s.label}</span>
         </div>`;
       }).join('')}
     </div>
-    ${reviewing?`<div style="margin-top:6px;font-size:12px;color:var(--cyan)">⏳ 审查第${p._reviewChapter}章（第${p._reviewStep+1}/${STEPS.length}步）</div>`:''}
+    ${reviewing?`<div style="margin-top:4px;font-size:11px;color:var(--cyan)">⏳ 审查第${p._reviewChapter}章（${p._reviewStep+1}/${STEPS.length}）</div>`:''}
   </div>`;
 
   html += `<button class="btn btn-primary btn-block" id="btnStartReview" ${_reviewInProgress?'disabled':''}>
-    ${_reviewInProgress?'⏳ 审查进行中...':'🔍 启动审查'}
+    ${_reviewInProgress?'⏳ 审查中...':'🔍 启动审查'}
   </button>`;
 
-  // ─── 审查结果展示 ───
-  if(lastReview){
-    const ch = chapters.find(c=>c.number===lastReview.chapter);
-    const isPassed = lastReview.verdict==='pass';
-    html += `<div class="card" style="border-left:3px solid ${isPassed?'var(--green)':'var(--orange)'};margin-top:12px">
-      <div class="card-title">📊 审查结果 — 第${lastReview.chapter}章${ch?.title?' '+ch.title:''}</div>`;
+  // ─── 审查结果 ───
+  if(lr){
+    const ch = chapters.find(c=>c.number===lr.chapter);
+    html += `<div class="card" style="margin-top:10px"><div class="card-title">📊 审查结果 — 第${lr.chapter}章${ch?.title?' '+ch.title:''}</div>`;
 
-    // 三审评分 + 加权总分
-    const rKeys = [
-      {key:'strict',label:'🔴 严审',color:'var(--accent)'},
-      {key:'moderate',label:'🟡 衡审',color:'var(--orange)'},
-      {key:'lenient',label:'🟢 宽审',color:'var(--green)'},
-    ];
-    html += `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">`;
+    // 三审评分 + 加权 + 门禁
+    const rKeys=[{k:'strict',l:'🔴 严审',c:'var(--accent)'},{k:'moderate',l:'🟡 衡审',c:'var(--orange)'},{k:'lenient',l:'🟢 宽审',c:'var(--green)'}];
+    html += `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">`;
     rKeys.forEach(r=>{
-      const s = lastReview.reviewers?.[r.key]?.score||0;
-      html += `<div style="text-align:center;padding:6px 12px;background:rgba(255,255,255,.03);border-radius:8px;flex:1;min-width:70px">
-        <div style="font-size:9px;color:var(--text-dim)">${r.label}</div>
-        <div style="font-size:20px;font-weight:700;color:${r.color}">${s.toFixed(0)}</div>
-      </div>`;
+      const s=lr.reviewers?.[r.k]?.score||0;
+      html += `<div style="text-align:center;padding:4px 10px;background:rgba(255,255,255,.03);border-radius:6px;flex:1;min-width:60px">
+        <div style="font-size:8px;color:var(--text-dim)">${r.l}</div>
+        <div style="font-size:18px;font-weight:700;color:${r.c}">${s.toFixed(0)}</div></div>`;
     });
-    html += `<div style="text-align:center;padding:6px 12px;background:rgba(0,212,255,.1);border-radius:8px;flex:1;min-width:70px">
-      <div style="font-size:9px;color:var(--text-dim)">加权总分</div>
-      <div style="font-size:24px;font-weight:700;color:var(--cyan)">${(lastReview.finalScore||0).toFixed(0)}</div>
-    </div></div>`;
+    html += `<div style="text-align:center;padding:4px 10px;background:rgba(0,212,255,.1);border-radius:6px;flex:1;min-width:60px">
+      <div style="font-size:8px;color:var(--text-dim)">加权</div>
+      <div style="font-size:20px;font-weight:700;color:var(--cyan)">${(lr.finalScore||0).toFixed(0)}</div></div>`;
+    const vm={pass:['✅','已通过','var(--green)'],revise:['🔄','需修订','var(--orange)'],manual:['⚠️','需人工','var(--accent)']};
+    const [vi,vt,vc]=vm[lr.verdict]||['❓','?','var(--text-dim)'];
+    html += `<div style="text-align:center;padding:4px 10px;background:rgba(46,213,115,.08);border-radius:6px;flex:1;min-width:60px">
+      <div style="font-size:8px;color:var(--text-dim)">门禁</div>
+      <div style="font-size:16px;font-weight:700;color:${vc}">${vi} ${vt}</div></div>`;
+    html += `</div>`;
+    if(lr.hasMinDimIssue&&lr.minDimIssues?.length){
+      html += `<div style="padding:4px 8px;background:rgba(233,96,96,.1);border-radius:4px;margin-bottom:6px;font-size:11px">
+        <span style="color:var(--accent);font-weight:600">🔴 严审短板：</span>
+        ${lr.minDimIssues.map(m=>`${m.dimension}(${m.score}/10)`).join('、')}</div>`;
+    }
 
-    // 门禁判定
-    const vMap={pass:['✅','已通过','var(--green)'],revise:['🔄','需修订','var(--orange)'],manual:['⚠️','需人工审查','var(--accent)']};
-    const [vIcon,vText,vColor]=vMap[lastReview.verdict]||['❓','未知','var(--text-dim)'];
-    html += `<div style="padding:8px 12px;background:rgba(46,213,115,.08);border-radius:6px;display:flex;align-items:center;gap:8px;margin-bottom:6px">
-      <span style="font-size:20px">${vIcon}</span>
-      <div><div style="font-weight:600;color:${vColor}">${vText}（通过≥${qg.passThreshold}，修订≥${qg.reviseThreshold}）</div>
-      <div style="font-size:11px;color:var(--text-dim)">${new Date(lastReview.timestamp).toLocaleString()} · 迭代 ${lastReview.iteration||1}/${qg.maxIterations}</div></div>
-    </div>`;
+    // ═══ 三审查官建议（逐个展开+Apply按钮）═══
+    if(lr.allSuggestions?.length){
+      html += `<div style="margin-top:6px"><div class="card-title" style="font-size:13px">💡 修改建议（点击展开查看，可逐条应用）</div>`;
+      lr.allSuggestions.forEach((s,i)=>{
+        const rColor = s.reviewer==='strict'?'var(--accent)':s.reviewer==='moderate'?'var(--orange)':'var(--green)';
+        const rLabel = s.reviewer==='strict'?'🔴 严审':s.reviewer==='moderate'?'🟡 衡审':'🟢 宽审';
+        const sugId = `sug_${lr.chapter}_${i}`;
+        html += `<details style="margin:3px 0;padding:4px 8px;border-radius:4px;background:rgba(255,255,255,.02);border-left:2px solid ${rColor}">
+          <summary style="cursor:pointer;font-size:12px">
+            <span style="color:${rColor}">${rLabel}</span>
+            ${s.dimension?`<span style="color:var(--text-dim)">[${s.dimension}]</span>`:''}
+            ${(s.proposed_change||s.description||'').substring(0,50)}${(s.proposed_change||'').length>50?'...':''}
+          </summary>
+          <div style="margin-top:4px;font-size:12px;line-height:1.6">
+            ${s.location?`<div style="color:var(--orange);font-size:11px">📍 位置: ${s.location}</div>`:''}
+            ${s.current_text?`<div style="padding:4px;background:rgba(233,96,96,.08);border-radius:3px;margin:4px 0"><span style="color:var(--accent)">原文:</span> ${s.current_text}</div>`:''}
+            ${s.proposed_change?`<div style="padding:4px;background:rgba(46,213,115,.08);border-radius:3px;margin:4px 0"><span style="color:var(--green)">建议修改:</span> ${s.proposed_change}</div>`:''}
+            ${s.description?`<div style="padding:4px;background:rgba(255,255,255,.03);border-radius:3px;margin:4px 0;color:var(--text-dim)">${s.description}</div>`:''}
+            ${s.reasoning?`<div style="font-size:11px;color:var(--text-dim);margin-top:2px">💡 ${s.reasoning}</div>`:''}
+            <button class="btn btn-sm btn-primary" style="margin-top:6px" data-sug-id="${sugId}" onclick="applySuggestion(${lr.chapter},${i})">📌 应用此建议</button>
+          </div>
+        </details>`;
+      });
+      html += `</div>`;
 
-    // 严审最低维度分警告
-    if(lastReview.hasMinDimIssue && lastReview.minDimIssues?.length){
-      html += `<div style="padding:6px 10px;background:rgba(233,96,96,.1);border:1px solid var(--accent);border-radius:6px;margin-bottom:6px;font-size:12px">
-        <div style="font-weight:600;color:var(--accent);margin-bottom:4px">🔴 严审发现短板维度（低于阈值${qg.strictMinDim}分）</div>
-        ${lastReview.minDimIssues.map(m=>`<div style="color:var(--text-dim);padding:2px 0">· ${m.dimension}: ${m.score}/10</div>`).join('')}
+      // 定稿按钮
+      html += `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-success" id="btnApproveChapter" onclick="approveChapter(${lr.chapter})">✅ 同意结果，定稿此章</button>
+        <button class="btn btn-secondary" id="btnReReview" onclick="startReview('${locked.name}',${lr.chapter})">🔄 重新审查</button>
+      </div>`;
+    } else if(lr.reviewers){
+      html += `<div style="margin-top:8px"><p style="font-size:12px;color:var(--text-dim)">三审查官已完成评分，但未输出具体修改建议。</p>
+        <button class="btn btn-success" onclick="approveChapter(${lr.chapter})">✅ 直接定稿</button>
       </div>`;
     }
 
-    // ═══ 夹逼定理优选结果（核心创新） ═══
-    if(lastReview.squeezeResult){
-      const sq = lastReview.squeezeResult;
-      html += `<details open style="margin-top:6px"><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--cyan)">🔬 夹逼定理优选结果（置信度 ${(sq.confidence*100).toFixed(0)}%）</summary>
-        <div style="margin-top:6px;padding:8px;background:rgba(0,212,255,.04);border-radius:6px">`;
-      if(sq.winner){
-        html += `<div style="font-weight:600;color:var(--green);margin-bottom:4px">✅ 最优建议</div>
-          <div style="font-size:12px;padding:6px;background:rgba(0,0,0,.15);border-radius:4px;margin-bottom:6px">
-            <div style="color:var(--text-dim);margin-bottom:2px">严审认可度: ${(sq.winner.strict*100).toFixed(0)}% · 衡审: ${(sq.winner.moderate*100).toFixed(0)}% · 宽审: ${(sq.winner.lenient*100).toFixed(0)}%</div>
-            <div style="font-size:11px">夹逼宽度: ${(sq.winner.width*100).toFixed(0)}% · 收敛度: ${(sq.winner.convergence*100).toFixed(0)}% · 质量分: ${(sq.winner.quality*100).toFixed(0)}%</div>
-          </div>`;
-        if(sq.winner.suggestion){
-          html += `<div style="font-size:12px;padding:8px;background:rgba(255,255,255,.04);border-radius:4px;margin-bottom:6px">
-            <div style="color:var(--orange);margin-bottom:2px">📝 建议内容</div>
-            <div>${sq.winner.suggestion.replace(/\n/g,'<br>')}</div>
-          </div>`;
-        }
-      }
-      if(sq.runnerUp){
-        html += `<details><summary style="cursor:pointer;font-size:11px;color:var(--text-dim)">🥈 备选建议（严审${(sq.runnerUp.strict*100).toFixed(0)}%/衡审${(sq.runnerUp.moderate*100).toFixed(0)}%/宽审${(sq.runnerUp.lenient*100).toFixed(0)}%）</summary>
-          <div style="font-size:11px;padding:6px;background:rgba(0,0,0,.1);border-radius:4px;margin-top:4px">${sq.runnerUp.suggestion||''}</div>
-        </details>`;
-      }
-      if(sq.proof){
-        html += `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:11px;color:var(--text-dim)">📐 夹逼定理数学证明</summary>
-          <div style="font-size:11px;color:var(--text-dim);padding:6px;background:rgba(0,0,0,.1);border-radius:4px;margin-top:4px;white-space:pre-wrap">${sq.proof}</div>
-        </details>`;
-      }
-      html += `</div></details>`;
-    }
-
-    // ═══ 各审查官的修改建议 ═══
-    if(lastReview.allSuggestions?.length){
-      html += `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--cyan)">📝 三审查官建议汇总（${lastReview.allSuggestions.length}条）</summary>
-        <div style="margin-top:4px">`;
-      // 按审查官分组
-      const byReviewer = {};
-      lastReview.allSuggestions.forEach(s=>{
-        const r = s.reviewer||'unknown';
-        if(!byReviewer[r]) byReviewer[r]=[];
-        byReviewer[r].push(s);
-      });
-      Object.entries(byReviewer).forEach(([rKey, sugs])=>{
-        const rLabel = rKey==='strict'?'🔴 严审':rKey==='moderate'?'🟡 衡审':'🟢 宽审';
-        html += `<div style="margin:4px 0"><span style="font-weight:600;font-size:12px">${rLabel}（${sugs.length}条）</span></div>`;
-        sugs.forEach(s=>{
-          const isWinner = s.id && lastReview.squeezeResult?.winner?.id===s.id;
-          html += `<div style="padding:4px 8px;margin:2px 0;border-radius:4px;font-size:11px;background:${isWinner?'rgba(46,213,115,.1)':'rgba(255,255,255,.03)'};border-left:2px solid ${isWinner?'var(--green)':'transparent'}">
-            ${isWinner?'🏆 ':'· '}
-            <span style="color:var(--orange)">[${s.dimension||s.type||'建议'}]</span>
-            ${s.proposed_change||s.description||''}
-            ${s.location?`<span style="color:var(--text-muted);margin-left:4px">📍${s.location}</span>`:''}
+    // S1违规原文高亮
+    if(lr.s1Results?.length){
+      const flagged = lr.s1Results.filter(r=>r.flagged);
+      if(flagged.length){
+        html += `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;color:var(--text-dim)">⚙️ S1机械闸 — ${flagged.length}项标记</summary><div style="margin-top:4px">`;
+        flagged.forEach(r=>{
+          const sev=r.severity||'WARN'; const sevIcon=sev==='BLOCK'?'🚫':'⚠️';
+          html += `<div style="padding:4px 8px;margin:3px 0;background:rgba(233,96,96,.06);border-radius:4px;border-left:2px solid var(--accent);font-size:11px">
+            <span>${sevIcon}</span> <strong>${r.rule}</strong>
+            ${r.detail?`<div style="color:var(--text-dim);margin-top:2px">${r.detail}</div>`:''}
+            ${r.matchedText?`<div style="background:rgba(233,96,96,.08);padding:2px 6px;border-radius:3px;margin-top:2px;font-size:11px;color:var(--accent)">原文: …${r.matchedText}…</div>`:''}
           </div>`;
         });
+        html += `</div></details>`;
+      }
+    }
+
+    // 13维度详情
+    if(lr.dimScores?.length){
+      html += `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:11px;color:var(--text-dim)">📋 13维度评分</summary><div style="margin-top:4px">`;
+      lr.dimScores.forEach((d,i)=>{
+        const w=Math.min(100,Math.max(5,d.average));
+        html += `<div style="margin-bottom:2px"><div style="display:flex;justify-content:space-between;font-size:9px"><span>${DIM_NAMES[i]}</span><span>${d.average.toFixed(0)}</span></div>
+          <div style="height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${w}%;background:${d.average>=qg.strictMinDim*10?'linear-gradient(90deg,var(--cyan),var(--purple))':'var(--accent)'};border-radius:2px"></div></div></div>`;
       });
       html += `</div></details>`;
     }
 
-    // 13维度详细评分
-    if(lastReview.dimScores?.length){
-      html += `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--text-dim)">📋 13维度评分详情</summary>
-        <div style="margin-top:4px">`;
-      lastReview.dimScores.forEach((d,i)=>{
-        const w = Math.min(100,Math.max(5,d.average));
-        html += `<div style="margin-bottom:3px">
-          <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:1px"><span>${DIM_NAMES[i]||'维度'+(i+1)}</span><span>${d.average.toFixed(0)}</span></div>
-          <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
-            <div style="height:100%;width:${w}%;background:${d.average>=qg.strictMinDim*10?'linear-gradient(90deg,var(--cyan),var(--purple))':'var(--accent)'};border-radius:2px"></div></div>
-        </div>`;
-      });
-      html += `</div></details>`;
-    }
-
-    // S1检查结果
-    if(lastReview.s1Results?.length){
-      const flagged = lastReview.s1Results.filter(r=>r.flagged).length;
-      html += `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--text-dim)">⚙️ S1机械闸（${flagged}项标记）</summary><div style="margin-top:4px">`;
-      lastReview.s1Results.forEach(r=>{
-        if(!r.flagged) return;
-        const sev=r.severity||'WARN'; const sevIcon=sev==='BLOCK'?'🚫':'⚠️'; const sevColor=sev==='BLOCK'?'var(--accent)':'var(--orange)';
-        html += `<div style="display:flex;align-items:center;gap:4px;padding:2px 0;font-size:11px">
-          <span>${sevIcon}</span><span style="color:${sevColor}">${r.rule||r.name}</span>
-          ${r.detail?`<span style="color:var(--text-dim)">— ${r.detail}</span>`:''}
-        </div>`;
-      });
-      html += `</div></details>`;
-    }
-
-    // 修订历史
-    if(lastReview.revisionHistory?.length){
-      html += `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--text-dim)">📝 修订历史（${lastReview.revisionHistory.length}次）</summary><div style="margin-top:4px">`;
-      lastReview.revisionHistory.forEach((rh,i)=>{
-        html += `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px">
-          <span style="color:var(--text-dim)">第${i+1}次 · ${rh.score.toFixed(0)}分</span>
-          ${rh.appliedSuggestion?`<span style="color:var(--green);margin-left:6px">✅ 已应用建议</span>`:''}
-        </div>`;
-      });
-      html += `</div></details>`;
-    }
-
-    // 各审查官评语
+    // 三审评语
     html += `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">`;
     rKeys.forEach(r=>{
-      const rv = lastReview.reviewers?.[r.key];
-      if(rv?.comment){
-        html += `<div style="flex:1;min-width:120px;padding:6px;background:rgba(255,255,255,.03);border-radius:6px;font-size:11px;border-left:2px solid ${r.color}">
-          <div style="font-weight:600;color:${r.color};margin-bottom:2px">${r.label}</div>
-          <div style="color:var(--text-dim)">${rv.comment.substring(0,100)}</div>
-        </div>`;
-      }
+      const rv=lr.reviewers?.[r.k];
+      if(rv?.comment) html += `<div style="flex:1;min-width:100px;padding:4px 6px;background:rgba(255,255,255,.03);border-radius:4px;font-size:10px;border-left:2px solid ${r.c}">
+        <div style="font-weight:600;color:${r.c}">${r.l}</div><div style="color:var(--text-dim)">${rv.comment.substring(0,80)}</div></div>`;
     });
     html += `</div></div>`;
 
-    // 质量趋势图
+    // 质量趋势
     if(p.qualityHistory?.length>1){
       html += `<div class="card"><div class="card-title">📈 质量趋势</div>
-        <div style="height:100px"><canvas id="reviewChart"></canvas></div>
-      </div>`;
+        <div style="height:80px"><canvas id="reviewChart"></canvas></div></div>`;
     }
   } else {
     html += `<div class="card"><div class="card-title">📊 无审查记录</div>
-      <div class="empty-state"><p>选择一个章节并点击「启动审查」开始</p>
-      <p style="font-size:12px;color:var(--text-dim);margin-top:6px">审查将运行完整流水线：S1扫描 → 三审查官评分+建议 → 选票汇总 → 夹逼定理优选最优建议 → 投票确认 → 应用建议 → 质量门禁判定</p></div>
-    </div>`;
+      <div class="empty-state"><p>选择一个章节，点击「启动审查」让三审查官评审</p></div></div>`;
   }
 
   main.innerHTML = html;
@@ -2627,24 +2567,16 @@ renderers.review = function(){
 
   // 右侧面板
   let sideHtml = `<div class="card"><div class="card-title">📖 ${locked.name}</div>
-    <div style="font-size:12px;color:var(--text-dim);line-height:1.8">
-      <div>📄 章节: ${chapters.length}章</div>
-      <div>📊 已审查: ${p.qualityHistory?.length||0}次</div>
-      <div>⚙️ 通过: ${qg.passThreshold} / 修订: ${qg.reviseThreshold}</div>
-      <div>📈 最大迭代: ${qg.maxIterations}次</div>
-    </div>
-  </div>
-  <div class="card"><div class="card-title">⚡ 快捷操作</div>
-    <button class="btn btn-secondary btn-sm btn-block" style="margin-bottom:4px" onclick="(()=>{const s=document.getElementById('reviewChSelect');if(!s)return;s.value='${chapters.length}';document.getElementById('btnStartReview')?.click()})()">🔍 审查最新章</button>
-    <button class="btn btn-secondary btn-sm btn-block" onclick="(()=>{const s=document.getElementById('reviewChSelect');if(!s)return;s.value='1';document.getElementById('btnStartReview')?.click()})()">🔍 审查第1章</button>
-  </div>
-  <div class="card"><div class="card-title">📖 门禁说明</div>
     <div style="font-size:11px;color:var(--text-dim);line-height:1.7">
-      <div>✅ ≥${qg.passThreshold}分 → <strong style="color:var(--green)">自动通过</strong></div>
-      <div>🔄 ≥${qg.reviseThreshold}分 → <strong style="color:var(--orange)">修订循环</strong></div>
-      <div>⚠️ &lt;${qg.reviseThreshold}分 → <strong style="color:var(--accent)">需人工审查</strong></div>
-      <div style="margin-top:4px;border-top:1px solid var(--border);padding-top:4px">🔬 <strong>夹逼定理</strong>: 严审(上界U)与宽审(下界L)的夹逼区间越窄，建议确定性越高</div>
+      <div>📄 章节: ${chapters.length}章</div>
+      <div>📊 审查: ${p.qualityHistory?.length||0}次</div>
+      <div>⚙️ 通过≥${qg.passThreshold} / 修订≥${qg.reviseThreshold}</div>
     </div>
+  </div>
+  <div class="card"><div class="card-title">⚡ 快捷</div>
+    <button class="btn btn-secondary btn-sm btn-block" style="margin-bottom:3px" onclick="(()=>{const s=document.getElementById('reviewChSelect');if(!s)return;s.value='${chapters.length}';document.getElementById('btnStartReview')?.click()})()">🔍 审查最新章</button>
+    <button class="btn btn-secondary btn-sm btn-block" onclick="(()=>{const s=document.getElementById('reviewChSelect');if(!s)return;s.value='1';document.getElementById('btnStartReview')?.click()})()">🔍 审查第1章</button>
+    <button class="btn btn-success btn-sm btn-block" style="margin-top:3px" onclick="approveChapter(parseInt(document.getElementById('reviewChSelect')?.value))" ${!lr?'disabled':''}>✅ 定稿此章</button>
   </div>`;
   side.innerHTML = sideHtml;
 
@@ -2652,24 +2584,70 @@ renderers.review = function(){
   if(p.qualityHistory?.length>1){
     setTimeout(()=>{
       const c=document.getElementById('reviewChart'); if(!c) return;
-      c.width=c.parentElement.clientWidth; c.height=100;
-      new Chart(c,{type:'line',data:{
+      c.width=c.parentElement.clientWidth; c.height=80;
+      try{new Chart(c,{type:'line',data:{
         labels:p.qualityHistory.map(d=>'Ch'+d.chapter),
-        datasets:[{
-          label:'评分', data:p.qualityHistory.map(d=>d.final_score),
-          borderColor:'var(--cyan)', tension:.3, pointRadius:3,
+        datasets:[{label:'评分',data:p.qualityHistory.map(d=>d.final_score),borderColor:'var(--cyan)',tension:.3,pointRadius:2,
           pointBackgroundColor:p.qualityHistory.map(d=>d.final_score>=qg.passThreshold?'var(--green)':d.final_score>=qg.reviseThreshold?'var(--orange)':'var(--accent)')
-        },{
-          label:'通过线', data:p.qualityHistory.map(()=>qg.passThreshold),
-          borderColor:'rgba(46,213,115,.3)', borderDash:[4,4], pointRadius:0
-        }]},
-        options:{responsive:true,maintainAspectRatio:false,
-          plugins:{legend:{labels:{color:'#8888aa',font:{size:8},boxWidth:10}}},
+        },{label:'通过线',data:p.qualityHistory.map(()=>qg.passThreshold),borderColor:'rgba(46,213,115,.3)',borderDash:[4,4],pointRadius:0}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
           scales:{x:{ticks:{color:'#556677',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}},
-                  y:{min:0,max:100,ticks:{color:'#556677',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}}}}});
+                  y:{min:0,max:100,ticks:{color:'#556677',font:{size:8}},grid:{color:'rgba(255,255,255,.03)'}}}}});}catch(e){}
     },50);
   }
 };
+
+// ─── 定稿章节 ───
+function approveChapter(chNum){
+  const locked = getLockedProject();
+  if(!locked){toast('请先锁定项目','error');return}
+  const p = DB.projects[locked.name];
+  if(!p){toast('项目不存在','error');return}
+  const ch = (p.chapters||[]).find(c=>c.number===chNum);
+  if(!ch){toast('章节不存在','error');return}
+  ch.status = 'approved';
+  if(p._lastReview && p._lastReview.finalScore) ch.finalScore = p._lastReview.finalScore;
+  saveDB();
+  saveFileToDisk(locked.name, 'chapters', `chapter_${String(chNum).padStart(3,'0')}.md`, ch.content);
+  toast(`✅ 第${chNum}章已定稿`);
+  renderers.review();
+}
+
+// ─── 应用单条建议 ───
+function applySuggestion(chNum, sugIndex){
+  const locked = getLockedProject();
+  if(!locked){toast('请先锁定项目','error');return}
+  const p = DB.projects[locked.name]; if(!p) return;
+  const lr = p._lastReview; if(!lr) return;
+  const sug = lr.allSuggestions?.[sugIndex]; if(!sug) return;
+  const ch = (p.chapters||[]).find(c=>c.number===chNum); if(!ch) return;
+
+  const proposed = sug.proposed_change || sug.description || '';
+  const original = sug.current_text || '';
+  let content = ch.content || '';
+
+  if(original && content.includes(original)){
+    // 替换原文中的匹配文本
+    content = content.replace(original, proposed);
+    ch.content = content;
+    toast(`✅ 已应用「${sug.dimension||'修改'}」建议`);
+  } else if(original){
+    // 匹配不精确时，追加到章节末尾
+    ch.content += '\n\n<!-- 建议修改:\n' + proposed + '\n-->';
+    toast('⚠️ 未找到精确原文位置，建议已追加到章节末尾','warn');
+  } else {
+    // 无原文时直接追加
+    ch.content += '\n\n<!-- 建议修改:\n' + proposed + '\n-->';
+    toast('💡 建议已追加到章节末尾');
+  }
+  saveDB();
+  saveFileToDisk(locked.name, 'chapters', `chapter_${String(chNum).padStart(3,'0')}.md`, ch.content);
+
+  // 更新审查记录
+  if(!lr.appliedSuggestions) lr.appliedSuggestions = [];
+  lr.appliedSuggestions.push({index:sugIndex, dimension:sug.dimension, applied:true});
+  renderers.review();
+}
 
 // ─── S1机械闸：正则规则扫描（基于 anti_slop_rules.yaml 完整实现） ───
 const S1_RULES = [
@@ -2881,8 +2859,7 @@ function qualityGateDecision(finalScore, qg, hasMinDimIssue){
   return 'manual';
 }
 
-// ─── 审查主流程 ───
-// ─── 审查主流程（完整版：S1→三审→选票→夹逼→投票→应用建议→门禁→修订循环） ───
+// ─── 审查主流程（S1→三审→选票→夹逼→门禁，不复选不自动应用） ───
 async function startReview(projectName, chNum){
   const p = DB.projects[projectName];
   if(!p || _reviewInProgress) return;
@@ -2890,7 +2867,7 @@ async function startReview(projectName, chNum){
 
   const ch = (p.chapters||[]).find(c=>c.number===chNum);
   if(!ch){ toast('章节不存在','error'); _reviewInProgress=false; return; }
-  let content = ch.content || '';
+  const content = ch.content || '';
   if(!content || content.length<50){ toast('章节内容为空','error'); _reviewInProgress=false; return; }
 
   const cfg = DB.config || {};
@@ -2899,228 +2876,124 @@ async function startReview(projectName, chNum){
 
   p._reviewChapter = chNum;
   p._reviewStep = 0;
+  renderers.review();
 
-  let iteration = 0;
-  let currentContent = content;
-  let revisionHistory = [];
+  // ═══ Step 1: S1 机械闸 ═══
+  p._reviewStep = 1; renderers.review();
+  const s1Results = runS1Gate(content);
+  const s1Flagged = s1Results.filter(r=>r.flagged);
+  logAnalysis('S1','S1机械闸扫描', s1Flagged.length?s1Flagged.map(r=>r.rule).join(', '):'✅全部通过');
 
-  // ─── 迭代修订循环 ───
-  while(iteration < qg.maxIterations){
-    iteration++;
-    p._reviewStep = 0;
-    renderers.review();
-
-    // ═══ Step 1: S1 机械闸 ═══
-    p._reviewStep = 1; renderers.review();
-    const s1Results = runS1Gate(currentContent);
-    const s1Flagged = s1Results.filter(r=>r.flagged);
-    logAnalysis('S1', 'S1机械闸扫描', s1Flagged.length?`${s1Flagged.length}项标记: `+s1Flagged.map(r=>r.rule).join(', '):'✅ 全部通过');
-
-    // ═══ Step 2-4: S2 三审查官并行审查 ═══
-    const reviewerConfig = [
-      {key:'strict', label:'🔴 严审', temp: rp.strict?.temperature??0.3, roleDesc:'资深文学评论家'},
-      {key:'moderate',label:'🟡 衡审', temp: rp.moderate?.temperature??0.3, roleDesc:'资深编辑'},
-      {key:'lenient', label:'🟢 宽审', temp: rp.lenient?.temperature??0.4, roleDesc:'读者代表'},
-    ];
-
-    const reviews = [];
-    for(let i=0; i<reviewerConfig.length; i++){
-      const r = reviewerConfig[i];
-      p._reviewStep = 2 + i; renderers.review();
-      toast(`🔍 ${r.label} 审查第${chNum}章...`);
-      try {
-        const result = await callReviewer(projectName, chNum, currentContent, r.key, r.temp, cfg);
-        // 确保每个审查官输出包含suggestions字段
-        const reviewData = {
-          role: r.key, label: r.label,
-          score: result.overall || result.score || 50,
-          comment: result.comment || '',
-          scores: result.scores || DIM_KEYS.map(()=>5),
-          dimensions: result.dimensions || {},
-          critical_issues: result.critical_issues || [],
-          suggestions: result.suggestions || [],
-          strengths: result.strengths || [],
-          weaknesses: result.weaknesses || [],
-        };
-        reviews.push(reviewData);
-        logAnalysis(r.label, `第${chNum}章审查`, `评分${reviewData.score}，${reviewData.suggestions.length}条建议`);
-      } catch(e){
-        logAnalysis('S2错误', r.label, e.message);
-        reviews.push({role:r.key, label:r.label, score:50, comment:'审查异常', scores:DIM_KEYS.map(()=>5), suggestions:[], critical_issues:[]});
-      }
-    }
-
-    // ═══ Step 5: 选票汇总（Ballot） ═══
-    p._reviewStep = 5; renderers.review();
-    // 收集所有建议
-    let allSuggestions = [];
-    reviews.forEach(rv=>{
-      (rv.suggestions||[]).forEach(s=>{
-        allSuggestions.push({
-          id: rv.role+'-'+allSuggestions.length,
-          reviewer: rv.role,
-          reviewerLabel: rv.label,
-          type: s.type||'polish',
-          location: s.location||'',
-          dimension: s.expected_improvement?.dimension||s.dimension||'',
-          proposed_change: s.proposed_change||s.description||'',
-          reasoning: s.reasoning||'',
-          severity: s.severity||'MINOR',
-        });
+  // ═══ Step 2-4: S2 三审查官 ═══
+  const reviewerConfig = [
+    {key:'strict', label:'🔴 严审', temp: rp.strict?.temperature??0.3},
+    {key:'moderate',label:'🟡 衡审', temp: rp.moderate?.temperature??0.3},
+    {key:'lenient', label:'🟢 宽审', temp: rp.lenient?.temperature??0.4},
+  ];
+  const reviews = [];
+  for(let i=0; i<reviewerConfig.length; i++){
+    const r = reviewerConfig[i];
+    p._reviewStep = 2+i; renderers.review();
+    toast(`🔍 ${r.label} 审查第${chNum}章...`);
+    try {
+      const result = await callReviewer(projectName, chNum, content, r.key, r.temp, cfg);
+      reviews.push({
+        role: r.key, label: r.label,
+        score: result.overall||result.score||50,
+        comment: result.comment||'',
+        scores: result.scores||DIM_KEYS.map(()=>5),
+        suggestions: result.suggestions||[],
       });
-    });
-    // 去重（相同审查官+相同维度视为重复）
-    const deduped = [];
-    const seen = new Set();
-    allSuggestions.forEach(s=>{
-      const key = s.reviewer+'_'+s.dimension+'_'+s.proposed_change.substring(0,20);
-      if(!seen.has(key)){ seen.add(key); deduped.push(s); }
-    });
-    logAnalysis('选票汇总', `共${allSuggestions.length}条建议，去重后${deduped.length}条`, '');
-
-    // ═══ Step 6: 夹逼定理优选（SqueezeSelector） ═══
-    p._reviewStep = 6; renderers.review();
-    const squeezeResult = computeSqueeze(deduped, reviews);
-    logAnalysis('夹逼优选', squeezeResult.winner
-      ? `最优建议（严审${(squeezeResult.winner.strict*100).toFixed(0)}%/衡审${(squeezeResult.winner.moderate*100).toFixed(0)}%/宽审${(squeezeResult.winner.lenient*100).toFixed(0)}%）`
-      : '无可选建议', squeezeResult.proof||'');
-
-    // ═══ Step 7: 投票确认（置信度<85%时） ═══
-    p._reviewStep = 7; renderers.review();
-    let appliedSuggestion = null;
-    if(squeezeResult.winner && squeezeResult.confidence < 0.85 && squeezeResult.runnerUp){
-      // 低置信度：让Voter决定
-      toast('🗳️ 夹逼置信度不足，投票确认中...');
-      try {
-        const voterPrompt = `作为最终裁决者，请在以下两个修改建议中投票选择一个。\n\n建议A（来自${squeezeResult.winner.reviewer||'审查官'}）:\n${squeezeResult.winner.suggestion||''}\n\n建议B（来自${squeezeResult.runnerUp.reviewer||'审查官'}）:\n${squeezeResult.runnerUp.suggestion||''}\n\n请输出JSON: {"vote_for":"A|B","confidence":0.0-1.0,"reasoning":"理由"}`;
-        const voteResult = await callLLM([{role:'user', content:voterPrompt}], {max_tokens:1024, temperature:0.2});
-        const vm = voteResult.match(/\{[\s\S]*\}/);
-        if(vm){
-          const vd = JSON.parse(vm[0]);
-          if(vd.vote_for==='B') appliedSuggestion = squeezeResult.runnerUp;
-          else appliedSuggestion = squeezeResult.winner;
-          squeezeResult.voteResult = vd;
-        } else {
-          appliedSuggestion = squeezeResult.winner;
-        }
-      } catch(e){
-        appliedSuggestion = squeezeResult.winner;
-      }
-    } else if(squeezeResult.winner) {
-      appliedSuggestion = squeezeResult.winner;
+      logAnalysis(r.label, `评分${reviews[reviews.length-1].score}`, `${(result.suggestions||[]).length}条建议`);
+    } catch(e){
+      logAnalysis('S2错误', r.label, e.message);
+      reviews.push({role:r.key, label:r.label, score:50, comment:'审查异常', scores:DIM_KEYS.map(()=>5), suggestions:[]});
     }
-
-    // ═══ 应用最优建议（如果评分<通过阈值且有建议） ═══
-    let appliedChange = '';
-    if(appliedSuggestion && appliedSuggestion.suggestion){
-      try {
-        toast('✏️ 应用最优建议修改章节...');
-        const applyPrompt = `请根据以下修改建议，修订小说第${chNum}章的内容。\n\n修改建议：\n${appliedSuggestion.suggestion}\n\n原文开头：\n${currentContent.substring(0,500)}\n\n请输出修订后的完整章节内容。保持原有风格和叙事连贯性。`;
-        const revised = await callLLM(
-          [{role:'system', content:'你是一位专业的小说编辑。根据修改建议修订章节，直接输出修订后的章节正文。'},
-           {role:'user', content:applyPrompt}],
-          {max_tokens:16384, temperature:0.5}
-        );
-        if(revised && revised.length>100){
-          appliedChange = revised;
-          currentContent = revised;
-          saveFileToDisk(projectName, 'drafts', `revised_第${String(chNum).padStart(3,'0')}章_第${iteration}次.md`, revised);
-        }
-      } catch(e){
-        toast('⚠️ 自动修订失败，保留原文','warn');
-      }
-    }
-
-    // ═══ 加权评分 ═══
-    const {dimAvgs, finalScore, minDimIssues, hasMinDimIssue} = calculateWeightedScore(reviews, cfg, qg);
-    const combinedScore = Math.round(finalScore);
-
-    // 综合反馈
-    const feedback = reviews.map(r=>`${r.label}: ${r.comment||''}`).join('\n');
-    const minDimFeedback = hasMinDimIssue ? '\n⚠️ 严审短板维度：\n'+minDimIssues.map(m=>`· ${m.dimension}(${m.score}/10)`).join('\n') : '';
-
-    // ═══ Step 8: 质量门禁 ═══
-    p._reviewStep = 8; renderers.review();
-    const verdict = qualityGateDecision(combinedScore, qg, hasMinDimIssue);
-
-    // 构建审查记录
-    const reviewRecord = {
-      chapter: chNum, iteration, timestamp: Date.now(),
-      finalScore: combinedScore, verdict, passed: verdict==='pass',
-      s1Results, minDimIssues, hasMinDimIssue,
-      reviewers: {},
-      dimScores: dimAvgs.map((v,i)=>({dimension:DIM_NAMES[i], average:v*10})),
-      feedback: feedback+minDimFeedback,
-      allSuggestions: deduped,
-      squeezeResult: {
-        winner: appliedSuggestion ? {
-          id: appliedSuggestion.id,
-          strict: appliedSuggestion.strict||0,
-          moderate: appliedSuggestion.moderate||0,
-          lenient: appliedSuggestion.lenient||0,
-          width: appliedSuggestion.width||0,
-          convergence: appliedSuggestion.convergence||0,
-          quality: appliedSuggestion.quality||0,
-          suggestion: appliedSuggestion.suggestion||'',
-        } : null,
-        runnerUp: squeezeResult.runnerUp ? {
-          strict: squeezeResult.runnerUp.strict||0,
-          moderate: squeezeResult.runnerUp.moderate||0,
-          lenient: squeezeResult.runnerUp.lenient||0,
-          suggestion: squeezeResult.runnerUp.suggestion||'',
-        } : null,
-        confidence: squeezeResult.confidence||0,
-        proof: squeezeResult.proof||'',
-        voteResult: squeezeResult.voteResult||null,
-      },
-      revisionHistory: [...revisionHistory, {score:combinedScore, appliedSuggestion:!!appliedChange, feedback, iteration}],
-      _steps: {s1:true, s2_strict:true, s2_moderate:true, s2_lenient:true, ballot:true, squeeze:true, vote:true, gate:true},
-    };
-    reviewerConfig.forEach((r,i)=>{
-      reviewRecord.reviewers[r.key] = {
-        score: reviews[i]?.score||50,
-        comment: reviews[i]?.comment||'',
-        suggestions_count: (reviews[i]?.suggestions||[]).length,
-      };
-    });
-
-    revisionHistory.push({score:combinedScore, appliedSuggestion:!!appliedChange, feedback, iteration});
-    p._lastReview = reviewRecord;
-    p.qualityHistory = p.qualityHistory || [];
-    p.qualityHistory.push({chapter:chNum, final_score:combinedScore, iteration, verdict, timestamp:Date.now()});
-    saveDB();
-    renderers.review();
-
-    const ts = new Date().toISOString().replace(/[T:]/g,'-').slice(0,19);
-    saveFileToDisk(projectName, 'reviews', `review_第${String(chNum).padStart(3,'0')}章_${ts}.json`, reviewRecord);
-    logAnalysis('审查完成', `第${chNum}章 第${iteration}次迭代`, `总分${combinedScore} ${verdict}`);
-
-    // 门禁判定
-    if(verdict === 'pass'){
-      // 如果章节有修改，更新正式章节内容
-      if(appliedChange && appliedChange.length>100 && currentContent !== content){
-        ch.content = currentContent;
-        saveFileToDisk(projectName, 'chapters', `chapter_${String(chNum).padStart(3,'0')}.md`, currentContent);
-        toast(`✅ 第${chNum}章已通过审查并更新（${combinedScore}分）`);
-      } else {
-        toast(`✅ 第${chNum}章已通过审查（${combinedScore}分）`);
-      }
-      _reviewInProgress = false;
-      return;
-    }
-
-    if(verdict === 'revise'){
-      toast(`🔄 第${chNum}章需修订（${combinedScore}分），第${iteration+1}/${qg.maxIterations}次迭代...`);
-      continue;
-    }
-
-    // manual
-    toast(`⚠️ 第${chNum}章需人工审查（${combinedScore}分）`);
-    _reviewInProgress = false;
-    return;
   }
 
-  toast(`⚠️ 达到最大迭代次数(${qg.maxIterations})，审查结束`);
+  // ═══ Step 5: 选票汇总 ═══
+  p._reviewStep = 5; renderers.review();
+  const allSuggestions = [];
+  reviews.forEach(rv=>{
+    (rv.suggestions||[]).forEach(s=>{
+      allSuggestions.push({
+        reviewer: rv.role, reviewerLabel: rv.label,
+        type: s.type||'polish', location: s.location||'',
+        dimension: (s.expected_improvement?.dimension)||s.dimension||'',
+        current_text: s.current_text||'',
+        proposed_change: s.proposed_change||s.description||'',
+        reasoning: s.reasoning||'', description: s.description||'',
+      });
+    });
+  });
+  // 去重
+  const seen = new Set();
+  const deduped = allSuggestions.filter(s=>{
+    const key = s.reviewer+'_'+(s.dimension||'x')+'_'+(s.proposed_change||s.description||'').substring(0,30);
+    if(seen.has(key)) return false; seen.add(key); return true;
+  });
+  logAnalysis('选票汇总', `${allSuggestions.length}条→去重${deduped.length}条`, '');
+
+  // ═══ Step 6: 夹逼优选 ═══
+  p._reviewStep = 6; renderers.review();
+  const squeezeResult = computeSqueeze(deduped, reviews);
+  logAnalysis('夹逼优选', squeezeResult.winner?`最优${squeezeResult.winner.dimension||''}`:'无', squeezeResult.proof||'');
+
+  // ═══ Step 7: 投票确认 ═══
+  p._reviewStep = 7; renderers.review();
+  let finalSuggestion = squeezeResult.winner;
+  if(squeezeResult.winner && squeezeResult.confidence<0.85 && squeezeResult.runnerUp){
+    toast('🗳️ 夹逼置信度低，投票确认中...');
+    try {
+      const voteR = await callLLM([{role:'user', content:
+        `作为最终裁决者，在两个修改建议中投票选择一个。\n\nA: ${squeezeResult.winner.suggestion||''}\n\nB: ${squeezeResult.runnerUp.suggestion||''}\n\n输出JSON: {"vote_for":"A|B","confidence":0.0-1.0,"reasoning":"理由"}`}],
+        {max_tokens:512, temperature:0.2});
+      const jm = voteR.match(/\{[\s\S]*\}/);
+      if(jm){ const vd=JSON.parse(jm[0]); if(vd.vote_for==='B') finalSuggestion=squeezeResult.runnerUp; squeezeResult.voteResult=vd; }
+    } catch(e){}
+  }
+
+  // ═══ Step 8: 评分+门禁 ═══
+  p._reviewStep = 8; renderers.review();
+  const {dimAvgs, finalScore, minDimIssues, hasMinDimIssue} = calculateWeightedScore(reviews, cfg, qg);
+  const combinedScore = Math.round(finalScore);
+  const verdict = qualityGateDecision(combinedScore, qg, hasMinDimIssue);
+
+  // 构建审查记录（不复选，不自动修订）
+  const rKeys = {strict:'🔴 严审', moderate:'🟡 衡审', lenient:'🟢 宽审'};
+  const reviewRecord = {
+    chapter: chNum, iteration:1, timestamp:Date.now(),
+    finalScore: combinedScore, verdict, passed: verdict==='pass',
+    s1Results, minDimIssues, hasMinDimIssue,
+    reviewers: {},
+    dimScores: dimAvgs.map((v,i)=>({dimension:DIM_NAMES[i], average:v*10})),
+    feedback: reviews.map(r=>`${r.label}: ${r.comment||''}`).join('\n'),
+    allSuggestions: deduped,
+    squeezeResult: {
+      winner: finalSuggestion?{id:finalSuggestion.id, strict:finalSuggestion.strict, moderate:finalSuggestion.moderate, lenient:finalSuggestion.lenient, width:finalSuggestion.width, convergence:finalSuggestion.convergence, quality:finalSuggestion.quality, suggestion:finalSuggestion.suggestion||''}:null,
+      runnerUp: squeezeResult.runnerUp?{strict:squeezeResult.runnerUp.strict, moderate:squeezeResult.runnerUp.moderate, lenient:squeezeResult.runnerUp.lenient, suggestion:squeezeResult.runnerUp.suggestion||''}:null,
+      confidence: squeezeResult.confidence||0, proof: squeezeResult.proof||'', voteResult: squeezeResult.voteResult||null,
+    },
+    appliedSuggestions: [],
+    _steps: {s1:true, s2_strict:true, s2_moderate:true, s2_lenient:true, ballot:true, squeeze:true, vote:true, gate:true},
+  };
+  reviewerConfig.forEach((r,i)=>{
+    reviewRecord.reviewers[r.key] = {score: reviews[i]?.score||50, comment: reviews[i]?.comment||'', suggestions_count: (reviews[i]?.suggestions||[]).length};
+  });
+
+  p._lastReview = reviewRecord;
+  p.qualityHistory = p.qualityHistory || [];
+  p.qualityHistory.push({chapter:chNum, final_score:combinedScore, iteration:1, verdict, timestamp:Date.now()});
+  saveDB();
+  renderers.review();
+
+  const ts = new Date().toISOString().replace(/[T:]/g,'-').slice(0,19);
+  saveFileToDisk(projectName, 'reviews', `review_第${String(chNum).padStart(3,'0')}章_${ts}.json`, reviewRecord);
+  logAnalysis('审查完成', `第${chNum}章`, `总分${combinedScore} ${verdict}，${deduped.length}条建议`);
+
+  if(verdict==='pass') toast(`✅ 第${chNum}章审查完成（${combinedScore}分），可点击「定稿」确认`);
+  else if(verdict==='revise') toast(`🔄 第${chNum}章 ${combinedScore}分，可逐条点击「应用此建议」修改`);
+  else toast(`⚠️ 第${chNum}章 ${combinedScore}分，需人工审查建议后定稿`);
   _reviewInProgress = false;
 }
 
