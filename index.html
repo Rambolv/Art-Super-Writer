@@ -2499,6 +2499,14 @@ renderers.review = function(){
       </div>
     </div>`;
 
+    // 严审最低维度分警告
+    if(lastReview.hasMinDimIssue && lastReview.minDimIssues?.length){
+      html += `<div style="padding:6px 10px;background:rgba(233,96,96,.1);border:1px solid var(--accent);border-radius:6px;margin-bottom:8px;font-size:12px">
+        <div style="font-weight:600;color:var(--accent);margin-bottom:4px">🔴 严审发现短板维度（低于阈值${qg.strictMinDim}分）</div>
+        ${lastReview.minDimIssues.map(m=>`<div style="color:var(--text-dim);padding:2px 0">· ${m.dimension}: ${m.score}/10</div>`).join('')}
+      </div>`;
+    }
+
     // 13维度详细评分
     if(lastReview.dimScores && lastReview.dimScores.length){
       html += `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--cyan)">📋 13维度详细评分</summary>
@@ -2520,13 +2528,17 @@ renderers.review = function(){
 
     // S1检查结果
     if(lastReview.s1Results?.length){
-      html += `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--cyan)">⚙️ S1机械闸扫描结果</summary>
+      html += `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--cyan)">⚙️ S1机械闸扫描结果（${lastReview.s1Results.filter(r=>r.flagged).length}项标记）</summary>
         <div style="margin-top:4px">`;
       lastReview.s1Results.forEach(r=>{
         const passed = !r.flagged;
+        const sev = r.severity||'WARN';
+        const sevIcon = sev==='BLOCK'?'🚫':sev==='CRITICAL'?'🔴':'⚠️';
+        const sevColor = sev==='BLOCK'?'var(--accent)':sev==='CRITICAL'?'var(--orange)':'var(--orange)';
         html += `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px">
-          <span>${passed?'✅':'⚠️'}</span>
-          <span style="color:${passed?'var(--green)':'var(--orange)'}">${r.rule||r.name}</span>
+          <span>${passed?'✅':sevIcon}</span>
+          <span style="color:${passed?'var(--green)':sevColor}">${r.rule||r.name}</span>
+          ${r.severity && r.flagged?`<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:${sevColor}22;color:${sevColor}">${r.severity}</span>`:''}
           ${r.detail?`<span style="color:var(--text-dim)">— ${r.detail}</span>`:''}
         </div>`;
       });
@@ -2640,25 +2652,71 @@ renderers.review = function(){
   }
 };
 
-// ─── S1机械闸：正则规则扫描 ───
+// ─── S1机械闸：正则规则扫描（基于 anti_slop_rules.yaml 完整实现） ───
 const S1_RULES = [
-  {name:'AI味短语',pattern:/[（\(]?[完结结]?[束止]?[）\)]?[\s]*[。\.！!？?][\s]*[总总总而言之][\s]*[,，]|(总而言之|综上所述|总的来说|综上|总体而言|从整体来看|总体上看|整体而言)/gi, flag:true, detail:'检测到总结性AI味短语'},
-  {name:'AI味过渡',pattern:/(值得注意的是|需要指出的是|不可忽视的是|值得一提的是|尤为重要的是|更值得注意的是)/gi, flag:true, detail:'检测到学术性AI味过渡词'},
-  {name:'AI味列举',pattern:/(首先[,，]|其次[,，]|再次[,，]|最后[,，]|第一[,，]|第二[,，]|第三[,，])/gi, flag:true, detail:'检测到结构化列举模式'},
-  {name:'过度解释',pattern:/(这意味着|这说明|这表示|换句话说|也就是说|换言之)/gi, flag:true, detail:'检测到过度解释性短语'},
-  {name:'情感直白',pattern:/(他感到|她感到|他觉得|她觉得|心里想|内心充满|心中涌起)/gi, flag:true, detail:'检测到直接情感描写（建议用行动展示）'},
-  {name:'多余修饰',pattern:/(非常地|极其地|无比地|绝大地|异常地)/gi, flag:true, detail:'检测到冗余副词修饰'},
-  {name:'AI标准结尾',pattern:/(在[\s\S]{0,30}中[,，][\s\S]{0,50}扮演着[\s\S]{0,20}角色|为[\s\S]{0,30}奠定了[\s\S]{0,20}基础)/gi, flag:true, detail:'检测到AI标准句式'},
-  {name:'重复标点',pattern:/([，。！？；：]{2,})|([，。！？；：]\s+[，。！？；：])/g, flag:true, detail:'检测到重复标点'},
-  {name:'段落过长',pattern:null, flag:true, customCheck:function(text){
+  // ═══ 标点规则 ═══
+  {name:'半角标点混入',pattern:/[,.;:!?](?=[^\n])/g, flag:true, severity:'BLOCK',
+   detail:'中文文本中夹英文半角标点，应替换为全角'},
+  {name:'破折号过量',pattern:/——(?:(?!——).)*?——(?:(?!——).)*?——/g, flag:true, severity:'BLOCK',
+   detail:'单句中出现3个或以上破折号，建议减少使用'},
+  {name:'省略号滥用',pattern:/\.{3,}(?:.*?\.{3,}){2,}/gs, flag:true, severity:'WARN',
+   detail:'单段中省略号使用超过2次'},
+
+  // ═══ AI禁用句式 ═══
+  {name:'二元对比模板',pattern:/不是[^，,\n]{1,30}[，,]\s*而是/g, flag:true, severity:'BLOCK',
+   detail:'"不是X，而是Y"二元对比模板 — AI标志性句式，直接陈述Y即可'},
+  {name:'句首填充词',pattern:/[。！？\n]\s*(其实|老实说|不得不说|讲真|说真的|平心而论|坦白说)/g, flag:true, severity:'BLOCK',
+   detail:'句首零承载填充词，删除后直接进入内容'},
+  {name:'段尾总结腔',pattern:/(总之|总而言之|综上所述|由此可见|不难看出|不难发现|这告诉我们)/gi, flag:true, severity:'BLOCK',
+   detail:'段尾总结腔 — AI最标志性特征，让读者自己得出结论'},
+  {name:'过度解释',pattern:/(这意味着|这说明|这表示|换句话说|也就是说|换言之)/gi, flag:true, severity:'WARN',
+   detail:'过度解释 — 读者不需要你解释含义，展示即可'},
+  {name:'自问自答',pattern:/[？?]\s*(答案|原因|道理|关键)[\s\S]{0,30}(很|就|是|在)/gi, flag:true, severity:'WARN',
+   detail:'自问自答模式 — AI常见填充套路，不需要问问题再自己回答'},
+  {name:'强制比喻',pattern:/(就像|仿佛|宛如|犹如|如同).{1,20}(一样|一般|似的)/gi, flag:true, severity:'WARN',
+   detail:'强制比喻连续出现时显得刻意'},
+  {name:'情感标签',pattern:/(感到|觉得|感觉|认为|想道|心想|暗想)/gi, flag:true, severity:'WARN',
+   detail:'情感标签过度 — 应展示>告知，用行动表现情绪'},
+  {name:'AI味过渡',pattern:/(值得注意的是|需要指出的是|不可忽视的是|值得一提的是|尤为重要的是|更值得注意的是)/gi, flag:true, severity:'BLOCK',
+   detail:'检测到学术性AI味过渡词'},
+  {name:'AI味列举',pattern:/(首先[,，]|其次[,，]|再次[,，]|最后[,，]|第一[,，]|第二[,，]|第三[,，])/gi, flag:true, severity:'WARN',
+   detail:'检测到结构化列举模式'},
+  {name:'AI标准句式',pattern:/(在[\s\S]{0,30}中[,，][\s\S]{0,50}扮演着[\s\S]{0,20}角色|为[\s\S]{0,30}奠定了[\s\S]{0,20}基础)/gi, flag:true, severity:'BLOCK',
+   detail:'检测到AI标准句式'},
+  {name:'冗余副词',pattern:/(非常地|极其地|无比地|绝大地|异常地)/gi, flag:true, severity:'WARN',
+   detail:'检测到冗余副词修饰'},
+
+  // ═══ 结构问题 ═══
+  {name:'段落过长',pattern:null, severity:'WARN', customCheck:function(text){
     const lines = text.split('\n').filter(l=>l.trim().length>0);
     const longLines = lines.filter(l=>l.length>500);
     return longLines.length > Math.max(2, lines.length*0.1) ? {flagged:true, detail:`${longLines.length}/${lines.length}段超过500字`} : {flagged:false};
   }},
-  {name:'对话比例',pattern:null, flag:true, customCheck:function(text){
+  {name:'对话占比过低',pattern:null, severity:'WARN', customCheck:function(text){
     const quotes = (text.match(/[""「」『』""]/g)||[]).length;
     const ratio = quotes / text.length;
-    if(ratio < 0.01 && text.length > 1000) return {flagged:true, detail:`对话占比过低(${(ratio*100).toFixed(1)}%)`};
+    if(ratio < 0.005 && text.length > 1000) return {flagged:true, detail:`对话占比仅${(ratio*100).toFixed(1)}%，小说建议适当增加对话`};
+    return {flagged:false};
+  }},
+  {name:'段落长度均匀',pattern:null, severity:'WARN', customCheck:function(text){
+    const lines = text.split('\n').filter(l=>l.trim().length>0);
+    if(lines.length<3) return {flagged:false};
+    const lens = lines.map(l=>l.length);
+    const avg = lens.reduce((a,b)=>a+b,0)/lens.length;
+    const uniform = lens.filter(l=>Math.abs(l-avg)/avg<0.2).length;
+    if(uniform/lens.length>0.7 && lens.length>5) return {flagged:true, detail:`${uniform}/${lens.length}段长度接近（差异<20%），AI特征：段落均匀`};
+    return {flagged:false};
+  }},
+  {name:'句子长度单一',pattern:null, severity:'WARN', customCheck:function(text){
+    const sentences = text.split(/[。！？\n]/).filter(s=>s.trim().length>10);
+    if(sentences.length<5) return {flagged:false};
+    const lens = sentences.map(s=>s.length);
+    let uniformCount = 0;
+    for(let i=0; i<lens.length-1; i++){
+      const diff = Math.abs(lens[i]-lens[i+1])/Math.max(lens[i],lens[i+1]);
+      if(diff<0.2) uniformCount++;
+    }
+    if(uniformCount/(lens.length-1)>0.6) return {flagged:true, detail:`连续句子长度过于均匀（${uniformCount}处），AI特征明显`};
     return {flagged:false};
   }},
 ];
@@ -2668,13 +2726,13 @@ function runS1Gate(text){
   for(const rule of S1_RULES){
     if(rule.customCheck){
       const r = rule.customCheck(text);
-      if(r.flagged) results.push({rule:rule.name, flagged:true, detail:r.detail});
+      if(r.flagged) results.push({rule:rule.name, flagged:true, severity:rule.severity||'WARN', detail:r.detail});
       else results.push({rule:rule.name, flagged:false});
     } else if(rule.pattern){
       rule.pattern.lastIndex = 0;
       const matches = text.match(rule.pattern);
       if(matches && matches.length > 0){
-        results.push({rule:rule.name, flagged:true, detail:`发现${matches.length}处: ${matches.slice(0,3).join(', ')}${matches.length>3?'...':''}`});
+        results.push({rule:rule.name, flagged:true, severity:rule.severity||'WARN', detail:`发现${matches.length}处: ${matches.slice(0,3).join(', ')}${matches.length>3?'...':''}`});
       } else {
         results.push({rule:rule.name, flagged:false});
       }
@@ -2683,29 +2741,51 @@ function runS1Gate(text){
   return results;
 }
 
-// ─── S2审查官：调用LLM评分 ───
+// ─── S2审查官：调用LLM评分（基于 review_dimensions.yaml 完整子项） ───
+const DIM_SUB_CHECKS = {
+  plot: '情节逻辑是否自洽；因果关系是否清晰；情节推进是否有驱动力；是否存在情节漏洞；子情节是否与主线关联；转折是否合理（非巧合驱动）',
+  character: '角色行为是否符合人设；角色动机是否清晰；角色是否有独立的"声音"；角色成长弧线是否可见；配角是否有存在价值；角色关系是否有张力',
+  dialogue: '对话是否自然（不像朗诵）；每个角色是否有独特说话方式；潜台词是否丰富；对话是否推进剧情或揭示性格；对话标签是否简洁；是否有信息倾泻式对话',
+  pacing: '场景节奏是否与内容匹配；是否有过长的静态描述；高潮部分节奏是否紧凑；过渡段落是否简洁；章节结尾是否有钩子',
+  style: '句式是否有变化；比喻/意象是否新鲜；描写是否具体而非抽象；是否滥用副词；是否有多余的修饰语；叙事声音是否一致',
+  consistency: '时间线是否前后一致；角色细节是否保持（外貌/能力/知识）；世界观规则是否前后矛盾；已回收的伏笔是否遗漏；章节间的事件是否连续',
+  emotional_impact: '场景是否能引起共情；情感表达是否克制（展示>告知）；高潮部分是否有情感释放；是否有刻意煽情；氛围营造是否到位',
+  originality: '是否有陈词滥调；情节走向是否可预测；角色设定是否套路化；表达方式是否有新意；是否过度依赖类型套路',
+  readability: '段落是否过长；句子是否拗口；信息密度是否适中；是否有过多生僻词；叙述视角是否清晰',
+  ai_detection_risk: '是否有段尾总结句；是否有过度解释倾向；是否有"不是...而是..."模板；是否有填充式过渡词；是否所有段落长度相同；是否缺乏独特叙事声音',
+  character_psychology: '角色行为是否符合其OCEAN性格画像；角色决策是否体现核心欲望；角色是否表现出认知偏差；损失厌恶系数是否在行为中体现；道德基础是否驱动判断；Dark Triad特质是否适度展现；内在矛盾是否真实；心理成长/退化是否有迹可循',
+  social_dynamics: '角色间互动是否符合博弈论逻辑；联盟形成和破裂是否有均衡基础；权力不对等关系是否体现不同行为模式；角色是否考虑声誉效应；信任的建立/破坏是否有心理基础；社会互动是否揭示深层人格；是否存在"为冲突而冲突"的无关博弈',
+  exceptional_authenticity: '例外选择是否有内部逻辑支撑；例外选择是否有足够代价；例外频率是否合理（次次例外=没有例外）；是否是"为了特别而特别"；角色的超越性选择是否从最深层自我出发；转折点是否在前面章节有铺垫（累积压力）；是否避免类型套路的"英雄时刻"',
+};
+
 async function callReviewer(projectName, chNum, content, role, temperature, dimWeights){
-  const dimList = DIM_KEYS.map((k,i)=>`${i+1}. ${DIM_NAMES[i]}`).join('\n');
-  const systemPrompt = `你是一位专业的小说审查官，担任「${role}」角色。
+  const roleConfig = {
+    strict: {label:'审查官·严', roleDesc:'资深文学评论家', threshold:8, style:'激进的大幅修改', desc:'标准极其严格，对任何瑕疵都不放过。逐个检查13个维度的所有子项，低于8分即标记。'},
+    moderate: {label:'审查官·衡', roleDesc:'资深编辑', threshold:6, style:'实用的局部修改', desc:'标准适中，综合评价。检查各维度的核心子项，给出平衡的判断。'},
+    lenient: {label:'审查官·宽', roleDesc:'读者代表', threshold:4, style:'最小修改', desc:'标准宽松，关注亮点。从大局出发，只标记明显问题（低于4分）。'},
+  };
+  const rc = roleConfig[role] || roleConfig.moderate;
+  const dimSubList = DIM_KEYS.map((k,i)=>`${i+1}. 【${DIM_NAMES[i]}】\n   检查项：${DIM_SUB_CHECKS[k]||'综合评估'}`).join('\n\n');
+  const systemPrompt = `你是一位专业的小说${rc.roleDesc}，担任「${rc.label}」角色。
 
-审查标准：
-- 对每个维度给出 1-10 分（1=极差，10=完美）
-- 严审（strict）：标准严格，对任何瑕疵都不放过
-- 衡审（moderate）：标准适中，综合评价
-- 宽审（lenient）：标准宽松，关注亮点
-- 评语要具体、有例子支撑，不要空泛
+${rc.desc}
 
-审查维度（共13项）：
-${dimList}
+审查维度（共13项，每项含具体检查子项）：
+${dimSubList}
 
-请输出 JSON 格式（只输出JSON）：
+评分标准：
+- 每个维度 1-10 分（1=极差，5=及格，8=良好，10=完美）
+- ${rc.label}触发阈值：维度分 < ${rc.threshold} 即标记为问题
+- 严审必须逐项检查全部子项；衡审检查核心子项；宽审从大局评估
+
+请输出 JSON 格式（只输出JSON，不要其他文字）：
 {
   "scores": [维度1分, 维度2分, ..., 维度13分],
   "overall": 综合评分(1-100),
-  "comment": "简短评语",
-  "strengths": ["优点1", "优点2"],
-  "weaknesses": ["不足1", "不足2"],
-  "improvements": ["改进建议1", "改进建议2"]
+  "comment": "简短评语（指出最核心的1-2个问题或亮点）",
+  "strengths": ["优点1（附例子）", "优点2"],
+  "weaknesses": ["不足1（附例子）", "不足2"],
+  "improvements": ["改进建议1（具体可操作）", "改进建议2"]
 }`;
 
   const userPrompt = `请审查以下第${chNum}章内容：\n\n${content.substring(0,12000)}`;
@@ -2733,14 +2813,20 @@ ${dimList}
   }
 }
 
-// ─── 加权评定 ───
-function calculateWeightedScore(reviews, weights){
+// ─── 加权评定（含夹逼定理优选） ───
+function calculateWeightedScore(reviews, weights, qg){
   const dimCount = DIM_KEYS.length;
   const dimAvgs = [];
+  // 计算每个维度的夹逼均值：取三审中间值（去掉最高最低）
   for(let i=0; i<dimCount; i++){
-    let sum = 0, count = 0;
-    reviews.forEach(r=>{if(r.scores && r.scores[i]){sum+=r.scores[i]; count++;}});
-    dimAvgs.push(count>0?sum/count:5);
+    const vals = reviews.map(r=>r.scores && r.scores[i]).filter(v=>v!==undefined && v!==null);
+    if(vals.length===0){dimAvgs.push(5); continue;}
+    vals.sort((a,b)=>a-b);
+    let avg;
+    if(vals.length>=3) avg = vals[1]; // 中间值（夹逼）
+    else if(vals.length===2) avg = (vals[0]+vals[1])/2;
+    else avg = vals[0];
+    dimAvgs.push(avg);
   }
 
   // 加权平均
@@ -2753,11 +2839,24 @@ function calculateWeightedScore(reviews, weights){
   const dimAvg = weightTotal>0?weightedSum/weightTotal:5;
   const finalScore = Math.round(dimAvg * 10); // 1-10 → 0-100
 
-  return {dimAvgs, finalScore};
+  // 检查严审的最低维度分（strict_min_dimension）
+  const strictReview = reviews.find(r=>r.role==='strict');
+  let minDimIssues = [];
+  if(strictReview && strictReview.scores && qg){
+    DIM_KEYS.forEach((k,i)=>{
+      const score = strictReview.scores[i];
+      if(score!==undefined && score < (qg.strictMinDim||5)){
+        minDimIssues.push({dimension:DIM_NAMES[i], key:k, score, threshold:qg.strictMinDim});
+      }
+    });
+  }
+
+  return {dimAvgs, finalScore, minDimIssues, hasMinDimIssue: minDimIssues.length>0};
 }
 
-// ─── 门禁判定 ───
-function qualityGateDecision(finalScore, qg){
+// ─── 门禁判定（含严审最低维度分检查） ───
+function qualityGateDecision(finalScore, qg, hasMinDimIssue){
+  if(hasMinDimIssue) return 'manual'; // 严审发现短板 → 必须人工审查
   if(finalScore >= qg.passThreshold) return 'pass';
   if(finalScore >= qg.reviseThreshold) return 'revise';
   return 'manual';
@@ -2821,19 +2920,25 @@ async function startReview(projectName, chNum){
       }
     }
 
-    // ─── 投票汇总 ───
+    // ─── 投票汇总（夹逼定理优选+严审最低维度分检查） ───
     p._reviewStep = 5;
     renderers.review();
-    const {dimAvgs, finalScore} = calculateWeightedScore(reviews, cfg);
+    const {dimAvgs, finalScore, minDimIssues, hasMinDimIssue} = calculateWeightedScore(reviews, cfg, qg);
 
     // 夹逼定理：取三审中中间值作为最终，避免极端值
     const overalls = reviews.filter(r=>r.overall).map(r=>r.overall).sort((a,b)=>a-b);
     const squeezedScore = overalls.length>=3 ? overalls[1] : (overalls.length>=2?(overalls[0]+overalls[1])/2:overalls[0]||finalScore);
     const combinedScore = Math.round((finalScore * 0.4 + squeezedScore * 0.6));
 
+    // 如果严审有维度低于最低分，记录到反馈
+    let minDimFeedback = '';
+    if(hasMinDimIssue){
+      minDimFeedback = '\n⚠️ 严审发现以下维度得分过低：\n' + minDimIssues.map(m=>`  · ${m.dimension}(${m.score}/10) < 阈值${m.threshold}`).join('\n');
+    }
+
     // ─── 质量门禁 ───
     p._reviewStep = 6;
-    const verdict = qualityGateDecision(combinedScore, qg);
+    const verdict = qualityGateDecision(combinedScore, qg, hasMinDimIssue);
     renderers.review();
 
     // 收集评语
@@ -2846,6 +2951,8 @@ async function startReview(projectName, chNum){
       finalScore: combinedScore,
       squeezedScore,
       verdict,
+      minDimIssues,
+      hasMinDimIssue,
       passed: verdict === 'pass',
       s1Results,
       reviewers: {},
@@ -2863,7 +2970,7 @@ async function startReview(projectName, chNum){
     });
     reviewRecord._steps = {s1:true, s2_strict:!!reviews[0], s2_moderate:!!reviews[1], s2_lenient:!!reviews[2], vote:true, gate:true};
 
-    revisionHistory.push({score:combinedScore, feedback, iteration});
+    revisionHistory.push({score:combinedScore, feedback:feedback+minDimFeedback, iteration});
 
     p._lastReview = reviewRecord;
     p.qualityHistory = p.qualityHistory || [];
