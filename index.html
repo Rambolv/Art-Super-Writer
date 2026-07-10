@@ -371,6 +371,9 @@ function saveDB(){
   // 异步写磁盘（不阻塞 UI）
   const proj = DB.currentProject ? DB.projects[DB.currentProject] : null;
   if(proj) syncProjectMeta(DB.currentProject);
+  // ★ 保存审查状态（_lastReview/_reviewHistory/qualityHistory/continuity）
+  const locked = getLockedProject();
+  if(locked) saveReviewState(locked.name);
   // 写 localStorage 仅存元数据
   try {
     localStorage.setItem('asw_meta', JSON.stringify({
@@ -1166,6 +1169,8 @@ async function syncProjectFromDisk(projectName){
   if(await loadCharactersFromDisk(projectName)) loaded = true;
   if(await loadReaderDataFromDisk(projectName)) loaded = true;
   await loadProjectLogFromDisk(projectName);
+  // ★ 加载审查状态（审查历史/最后一次审查/连续性指标）
+  await loadReviewState(projectName);
   if(loaded) p.analyzed = true;
   return loaded;
 }
@@ -1222,6 +1227,58 @@ function saveProjectFilesToDisk(projectName, version){
     sk.external.forEach((content, i)=>{
       saveFileToDisk(projectName, 'skills/external' + v, `external_${i+1}.md`, content);
     });
+  }
+}
+
+// ─── 审查状态持久化（刷新不丢失） ───
+async function saveReviewState(projectName){
+  const p = DB.projects[projectName];
+  if(!p) return;
+  const state = {
+    _lastReview: p._lastReview || null,
+    _reviewHistory: p._reviewHistory || {},
+    qualityHistory: p.qualityHistory || [],
+    continuity: p.continuity || null,
+    _reviewSelectedCh: p._reviewSelectedCh || null,
+    savedAt: Date.now(),
+  };
+  // 写磁盘（主存储）
+  saveFileToDisk(projectName, 'config', 'review_state.json', state);
+  // 写 localStorage（备份，服务器离线时使用）
+  try {
+    localStorage.setItem('asw_review_'+projectName, JSON.stringify(state));
+  } catch(e){}
+}
+
+async function loadReviewState(projectName){
+  const p = DB.projects[projectName];
+  if(!p) return;
+  let loaded = false;
+  // 优先从磁盘加载
+  const content = await readFileFromDisk(projectName, 'config', 'review_state.json');
+  if(content){
+    try {
+      const state = JSON.parse(content);
+      if(state._lastReview) p._lastReview = state._lastReview;
+      if(state._reviewHistory) p._reviewHistory = state._reviewHistory;
+      if(state.qualityHistory) p.qualityHistory = state.qualityHistory;
+      if(state.continuity) p.continuity = state.continuity;
+      if(state._reviewSelectedCh) p._reviewSelectedCh = state._reviewSelectedCh;
+      loaded = true;
+    } catch(e){}
+  }
+  // 磁盘无数据时回退到 localStorage
+  if(!loaded){
+    try {
+      const backup = localStorage.getItem('asw_review_'+projectName);
+      if(backup){
+        const state = JSON.parse(backup);
+        if(state._lastReview) p._lastReview = state._lastReview;
+        if(state._reviewHistory) p._reviewHistory = state._reviewHistory;
+        if(state.qualityHistory) p.qualityHistory = state.qualityHistory;
+        if(state.continuity) p.continuity = state.continuity;
+      }
+    } catch(e){}
   }
 }
 
