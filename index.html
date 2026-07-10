@@ -2630,7 +2630,7 @@ renderers.review = function(){
           <span style="color:var(--text-dim);font-size:10px">${(s.proposed_change||'').substring(0,30)}${(s.proposed_change||'').length>30?'...':''}</span>
         </summary>
         <div style="margin-top:3px;font-size:11px;line-height:1.5">
-          ${s.current_text?`<div style="background:rgba(233,96,96,.08);padding:3px 5px;border-radius:2px;margin:2px 0;font-size:10px;cursor:pointer" onclick="scrollEditorToText(this.dataset.text)" data-text="${s.current_text.replace(/"/g,'&quot;').substring(0,120)}" title="点击跳转到原文位置"><span style="color:var(--accent)">📍 原文:</span> ${s.current_text}</div>`:''}
+          ${s.current_text?`<div style="background:rgba(233,96,96,.08);padding:3px 5px;border-radius:2px;margin:2px 0;font-size:10px;cursor:pointer" onclick="scrollEditorToText(this.dataset.text,this.dataset.marked)" data-text="${s.current_text.replace(/"/g,'&quot;').substring(0,120)}" data-marked="${(s.marked_text||'').replace(/"/g,'&quot;').substring(0,200)}" title="点击跳转到原文位置"><span style="color:var(--accent)">📍 原文:</span> ${s.current_text}</div>`:''}
           ${s.proposed_change?`<div style="background:rgba(46,213,115,.08);padding:3px 5px;border-radius:2px;margin:2px 0;font-size:10px"><span style="color:var(--green)">修改:</span> ${s.proposed_change}</div>`:''}
           ${s.reasoning?`<div style="font-size:10px;color:var(--text-dim);margin:2px 0">💡 ${s.reasoning}</div>`:''}
           ${alreadyApplied?'<span style="color:var(--green);font-size:10px">✅ 已应用</span>'
@@ -2914,85 +2914,87 @@ async function approveChapter(chNum){
   renderers.review();
 }
 
-// ─── 编辑器滚动到指定文本位置（模糊匹配） ───
-function scrollEditorToText(text){
+// ─── 编辑器滚动到指定文本位置（标记匹配） ───
+function scrollEditorToText(text, markedText){
   const editor = document.getElementById('reviewEditor');
-  if(!editor || !text) return;
+  if(!editor) return;
   const content = editor.value;
   if(!content) return;
 
-  // 将文本归一化（去空格/统一标点），提高匹配率
-  function normalize(t){ return t.replace(/[\s\n\r\u3000]+/g,' ').replace(/[，,]/g,',').replace(/[。.]/g,'.').replace(/[！!]/g,'!').replace(/[？?]/g,'?').replace(/[；;]/g,';').replace(/[：:]/g,':').replace(/[「」『』""]/g,'"').trim(); }
-  const normText = normalize(text);
-  const normContent = normalize(content);
-
-  let idx = -1;
-  let matchedText = '';
-
-  // 策略1：精确匹配（归一化后）
-  idx = normContent.indexOf(normText);
-  if(idx >= 0){
-    matchedText = text;
-  } else {
-    // 策略2：取原文前30字和后30字分别匹配
-    const prefixes = [];
-    // 按标点/空格分割，取各片段
-    const segments = text.split(/[，。！？、；：\n\r]/).filter(s=>s.trim().length>5);
-    for(const seg of segments){
-      const normSeg = normalize(seg);
-      const pos = normContent.indexOf(normSeg);
-      if(pos >= 0){ idx = pos; matchedText = seg; break; }
-    }
-    // 策略3：取原文前20字匹配
-    if(idx < 0 && text.length > 10){
-      const shortText = normalize(text.substring(0, 20));
-      idx = normContent.indexOf(shortText);
-      if(idx >= 0) matchedText = text.substring(0, 20);
-    }
-    // 策略4：取原文最后20字匹配
-    if(idx < 0 && text.length > 10){
-      const endText = normalize(text.substring(text.length - 20));
-      idx = normContent.indexOf(endText);
-      if(idx >= 0) matchedText = text.substring(text.length - 20);
+  // 策略0：如果有 marked_text，提取【【START】】和【【END】】之间的内容进行精确匹配
+  if(markedText){
+    const mStart = markedText.indexOf('【【START】】');
+    const mEnd = markedText.indexOf('【【END】】');
+    if(mStart >= 0 && mEnd > mStart){
+      const exactTarget = markedText.substring(mStart + 6, mEnd); // 去掉【【START】】
+      const idx = content.indexOf(exactTarget);
+      if(idx >= 0){
+        const beforeText = content.substring(0, idx);
+        const lineNum = beforeText.split('\n').length;
+        editor.focus();
+        editor.scrollTop = Math.max(0, (lineNum - 5)) * 22;
+        editor.setSelectionRange(idx, idx + exactTarget.length);
+        editor.style.transition = 'box-shadow 0.3s';
+        editor.style.boxShadow = '0 0 0 2px var(--cyan)';
+        setTimeout(()=>{ editor.style.boxShadow = 'none'; }, 1500);
+        return;
+      }
     }
   }
 
-  if(idx < 0){
-    toast('⚠️ 在编辑器中未找到完全匹配的原文，已将建议追加到末尾','warn');
-    // 仍然追加到末尾
-    editor.value += '\n\n<!-- 待修改:\n' + text + '\n-->';
-    editor.scrollTop = editor.scrollHeight;
+  // 策略1：直接精确匹配 current_text
+  if(text && content.includes(text)){
+    const idx = content.indexOf(text);
+    const beforeText = content.substring(0, idx);
+    const lineNum = beforeText.split('\n').length;
     editor.focus();
+    editor.scrollTop = Math.max(0, (lineNum - 5)) * 22;
+    editor.setSelectionRange(idx, idx + text.length);
+    editor.style.transition = 'box-shadow 0.3s';
+    editor.style.boxShadow = '0 0 0 2px var(--cyan)';
+    setTimeout(()=>{ editor.style.boxShadow = 'none'; }, 1500);
     return;
   }
 
-  // 通过归一化索引反向查找原文中的实际位置
-  // 使用最长公共子串近似
-  let actualIdx = -1;
-  if(matchedText && matchedText.length > 5){
-    actualIdx = content.indexOf(matchedText);
-  }
-  if(actualIdx < 0){
-    // 回退：使用归一化后的位置估算
-    const beforeNorm = normContent.substring(0, idx);
-    // 按字符比例估算原位置
-    actualIdx = Math.round(idx * (content.length / normContent.length));
-    actualIdx = Math.max(0, Math.min(content.length - 1, actualIdx));
+  // 策略2：从 marked_text 中提取【【START】】之前的上下文和【【END】】之后的上下文联合匹配
+  if(markedText){
+    const cleanMarked = markedText.replace(/【【START】】/g,'').replace(/【【END】】/g,'');
+    const mStart2 = markedText.indexOf('【【START】】');
+    const mEnd2 = markedText.indexOf('【【END】】');
+    if(mStart2 >= 0 && mEnd2 > mStart2){
+      // 取上下文：标记前10字+标记间内容+标记后10字
+      const ctx = markedText.substring(Math.max(0,mStart2-10), Math.min(markedText.length,mEnd2+14));
+      const cleanCtx = ctx.replace(/【【START】】/g,'').replace(/【【END】】/g,'');
+      const idx = content.indexOf(cleanCtx);
+      if(idx >= 0){
+        const beforeText = content.substring(0, idx);
+        const lineNum = beforeText.split('\n').length;
+        editor.focus();
+        editor.scrollTop = Math.max(0, (lineNum - 5)) * 22;
+        editor.setSelectionRange(idx, idx + cleanCtx.length);
+        editor.style.transition = 'box-shadow 0.3s';
+        editor.style.boxShadow = '0 0 0 2px var(--cyan)';
+        setTimeout(()=>{ editor.style.boxShadow = 'none'; }, 1500);
+        return;
+      }
+      // 再试：取标记之间的内容
+      const betweenMarks = markedText.substring(mStart2+6, mEnd2);
+      if(betweenMarks && content.includes(betweenMarks)){
+        const idx = content.indexOf(betweenMarks);
+        const beforeText = content.substring(0, idx);
+        const lineNum = beforeText.split('\n').length;
+        editor.focus();
+        editor.scrollTop = Math.max(0, (lineNum - 5)) * 22;
+        editor.setSelectionRange(idx, idx + betweenMarks.length);
+        editor.style.transition = 'box-shadow 0.3s';
+        editor.style.boxShadow = '0 0 0 2px var(--cyan)';
+        setTimeout(()=>{ editor.style.boxShadow = 'none'; }, 1500);
+        return;
+      }
+    }
   }
 
-  // 计算行号
-  const beforeText = content.substring(0, actualIdx);
-  const lineNum = beforeText.split('\n').length;
-  const lineHeight = 22;
-  editor.focus();
-  editor.scrollTop = Math.max(0, (lineNum - 5)) * lineHeight;
-  // 选中匹配文本
-  const matchLen = Math.min(matchedText.length, 80);
-  editor.setSelectionRange(actualIdx, Math.min(content.length, actualIdx + matchLen));
-  // 高亮动画
-  editor.style.transition = 'box-shadow 0.3s';
-  editor.style.boxShadow = '0 0 0 2px var(--cyan)';
-  setTimeout(()=>{ editor.style.boxShadow = 'none'; }, 1500);
+  toast('⚠️ 在编辑器中未找到此原文','warn');
 }
 
 // ─── 应用单条建议（实时替换编辑器内容） ───
@@ -3007,39 +3009,39 @@ function applyReviewSuggestion(chNum, sugIndex){
 
   const proposed = sug.proposed_change || sug.description || '';
   const original = sug.current_text || '';
+  const marked = sug.marked_text || '';
   let content = editor.value || '';
+  let foundTarget = '';
 
-  // ★ 先滚动到原文位置（高亮显示）
-  if(original) scrollEditorToText(original);
-
-  // ★ 使用模糊匹配查找原文位置
-  function normalize(t){ return t.replace(/[\s\n\r\u3000]+/g,' ').replace(/[，,]/g,',').replace(/[。.]/g,'.').replace(/[！!]/g,'!').replace(/[？?]/g,'?').replace(/[；;]/g,';').replace(/[：:]/g,':').replace(/[「」『』""]/g,'"').trim(); }
-  const normContent = normalize(content);
-  const normOriginal = normalize(original);
-
-  let replaceIdx = -1;
-  let actualOriginal = original;
-
-  // 策略1：归一化后匹配
-  replaceIdx = normContent.indexOf(normOriginal);
-  // 策略2：取原文前20字
-  if(replaceIdx < 0 && original.length > 10){
-    const shortNorm = normalize(original.substring(0, 20));
-    replaceIdx = normContent.indexOf(shortNorm);
-    if(replaceIdx >= 0) actualOriginal = content.substring(replaceIdx, replaceIdx + 20);
-  }
-  // 策略3：按标点分段匹配
-  if(replaceIdx < 0){
-    const segs = original.split(/[，。！？、；：]/).filter(s=>s.trim().length>5);
-    for(const seg of segs){
-      const ns = normalize(seg);
-      const p = normContent.indexOf(ns);
-      if(p >= 0){ replaceIdx = p; actualOriginal = content.substring(p, p+seg.length); break; }
+  // ★ 优先使用 marked_text 中的【【START】】【【END】】标记精确匹配
+  if(marked){
+    const mStart = marked.indexOf('【【START】】');
+    const mEnd = marked.indexOf('【【END】】');
+    if(mStart >= 0 && mEnd > mStart){
+      // 取标记之间的内容
+      const betweenMarks = marked.substring(mStart + 6, mEnd);
+      if(betweenMarks && content.includes(betweenMarks)){
+        foundTarget = betweenMarks;
+      } else {
+        // 取去掉标记后的完整上下文
+        const cleanMarked = marked.replace(/【【START】】/g,'').replace(/【【END】】/g,'');
+        if(content.includes(cleanMarked)){
+          foundTarget = cleanMarked;
+        }
+      }
     }
   }
 
-  if(replaceIdx >= 0 && actualOriginal){
-    content = content.replace(actualOriginal, proposed);
+  // 回退：直接匹配 current_text
+  if(!foundTarget && original && content.includes(original)){
+    foundTarget = original;
+  }
+
+  // ★ 先滚动
+  scrollEditorToText(original, marked);
+
+  if(foundTarget){
+    content = content.replace(foundTarget, proposed);
     editor.value = content;
     toast(`✅ 已应用「${sug.dimension||'修改'}」建议`);
   } else if(original){
@@ -3427,7 +3429,8 @@ ${dimSubList}
     {
       "type": "rewrite|polish",
       "location": "原文位置描述（如'第3段第2句'或具体上下文，限15字内）",
-      "current_text": "需要修改的原文片段",
+      "current_text": "仅需修改的原文片段（精确复制原文，含标点）",
+      "marked_text": "包含【【START】】和【【END】】标记的原文。把要修改的部分用【【START】】和【【END】】圈出来，前面和后面保留5-10个字作为上下文。例如：「前面几个字【【START】】要修改的原文【【END】】后面几个字」",
       "proposed_change": "建议修改后的文本",
       "reasoning": "为什么这样改（一句话）",
       "expected_improvement": {"dimension": "涉及的维度名", "delta": "+N"}
@@ -3596,6 +3599,7 @@ async function startReview(projectName, chNum){
         type: s.type||'polish', location: s.location||'',
         dimension: (s.expected_improvement?.dimension)||s.dimension||'',
         current_text: s.current_text||'',
+        marked_text: s.marked_text||'',  // ★ 带【【START】】【【END】】标记的原文
         proposed_change: s.proposed_change||s.description||'',
         reasoning: s.reasoning||'', description: s.description||'',
       });
