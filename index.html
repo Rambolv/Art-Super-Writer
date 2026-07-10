@@ -2988,21 +2988,21 @@ function applyReviewSuggestion(chNum, sugIndex){
   let found = '';
 
   // 策略1：归一化精确
-  let p = nContent.indexOf(nOriginal);
-  if(p >= 0){ found = content.substring(p, p + original.length); }
+  let pos = nContent.indexOf(nOriginal);
+  if(pos >= 0){ found = content.substring(pos, pos + original.length); }
   else {
     // 策略2：取前20字
     const short = original.substring(0, Math.min(20, original.length));
     const nShort = norm(short);
-    p = nContent.indexOf(nShort);
-    if(p >= 0) found = content.substring(p, p + short.length);
+    pos = nContent.indexOf(nShort);
+    if(pos >= 0) found = content.substring(pos, pos + short.length);
     else {
       // 策略3：分段
       const segs = original.split(/[，。！？、；：]/).filter(s=>s.trim().length>5);
       for(const seg of segs){
         const nSeg = norm(seg);
-        p = nContent.indexOf(nSeg);
-        if(p >= 0){ found = content.substring(p, p + seg.length); break; }
+        pos = nContent.indexOf(nSeg);
+        if(pos >= 0){ found = content.substring(pos, pos + seg.length); break; }
       }
     }
   }
