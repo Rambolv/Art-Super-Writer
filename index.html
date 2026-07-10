@@ -2556,15 +2556,19 @@ renderers.review = function(){
     main.innerHTML = html; side.innerHTML=''; return;
   }
 
-  // ─── 顶部：选择章节 + 审查流水线 + 启动按钮 ───
-  html += `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-    <select id="reviewChSelect" onchange="onReviewChChange()" style="width:140px">
+  // ─── 顶部：选择章节 + 历史审查 + 操作按钮 ───
+  html += `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+    <select id="reviewChSelect" onchange="onReviewChChange()" style="width:110px">
       ${chapters.map(ch=>`<option value="${ch.number}" ${ch.number===savedChNum?'selected':''}>第${ch.number}章${ch.status==='approved'?' ✅':' 📝'}</option>`).join('')}
+    </select>
+    <select id="reviewHistorySelect" style="width:160px;font-size:11px" onchange="onReviewHistorySelect(${savedChNum})">
+      <option value="">📋 当前审查结果</option>
     </select>
     <button class="btn btn-primary btn-sm" id="btnStartReview" ${_reviewInProgress?'disabled':''}>${_reviewInProgress?'⏳ 审查中...':'🔍 审查'}</button>
     <button class="btn btn-success btn-sm" onclick="saveReviewDraft(${savedChNum})">💾 保存草稿</button>
     <button class="btn btn-success btn-sm" onclick="approveChapter(${savedChNum})" ${!currentCh||currentCh.status==='approved'?'disabled':''}>✅ 定稿</button>
-  </div>`;
+  </div>
+  <div id="reviewHistoryStatus" style="font-size:10px;color:var(--text-dim);margin-bottom:4px"></div>`;
 
   // 流水线指示器
   html += `<div style="display:flex;gap:3px;margin-bottom:8px;flex-wrap:wrap">`;
@@ -2697,6 +2701,9 @@ renderers.review = function(){
     if(!n||_reviewInProgress)return; await startReview(locked.name,n);
   });
 
+  // ★ 异步加载历史审查文件列表到下拉框
+  loadReviewFileList(locked.name, savedChNum);
+
   // 右侧面板
   let sideHtml = `<div class="card"><div class="card-title">📖 ${locked.name}</div>
     <div style="font-size:11px;line-height:1.6">
@@ -2741,6 +2748,8 @@ function onReviewChChange(){
   const ch = (p.chapters||[]).find(c=>c.number===chNum);
   // 检查是否有更新的草稿
   loadReviewChapterContent(locked.name, chNum);
+  // 加载该章节的历史审查文件列表
+  loadReviewFileList(locked.name, chNum);
   renderers.review();
 }
 
@@ -2772,6 +2781,57 @@ async function loadReviewChapterContent(projectName, chNum){
     if(editor) editor.value = content;
     const ch = (p.chapters||[]).find(c=>c.number===chNum);
     if(ch) ch.content = content;
+  }
+}
+
+// ─── 加载历史审查文件列表到下拉框 ───
+async function loadReviewFileList(projectName, chNum){
+  const sel = document.getElementById('reviewHistorySelect');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">📋 当前审查结果</option>';
+  try {
+    const files = await listDiskFiles(projectName, 'reviews');
+    if(!files || !files.length) return;
+    const padded = String(chNum).padStart(3,'0');
+    const chFiles = files.filter(f => f.includes(`第${padded}章`)).sort().reverse();
+    chFiles.forEach(fname => {
+      const timeMatch = fname.match(/_(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})\.json$/);
+      const label = timeMatch ? timeMatch[1].replace(/-/g,':') : fname;
+      sel.innerHTML += `<option value="${fname}">🕐 ${label}</option>`;
+    });
+  } catch(e){}
+}
+
+// ─── 选择历史审查记录 ───
+async function onReviewHistorySelect(chNum){
+  const sel = document.getElementById('reviewHistorySelect');
+  if(!sel) return;
+  const fname = sel.value;
+  const statusEl = document.getElementById('reviewHistoryStatus');
+  if(!statusEl) return;
+  const locked = getLockedProject();
+  if(!locked) return;
+  const p = DB.projects[locked.name];
+  if(!p) return;
+
+  if(!fname){
+    // 切回当前审查结果
+    statusEl.textContent = '';
+    await loadReviewState(locked.name);
+    renderers.review();
+    return;
+  }
+
+  const content = await readFileFromDisk(locked.name, 'reviews', fname);
+  if(!content){ toast('无法加载审查记录','error'); return; }
+  try {
+    const reviewData = JSON.parse(content);
+    p._lastReview = reviewData;
+    statusEl.textContent = `📋 查看历史: ${fname.replace(/_(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})\.json$/,' $1')}`;
+    renderers.review();
+    toast('📋 已加载历史审查');
+  } catch(e){
+    toast('审查记录格式错误','error');
   }
 }
 
