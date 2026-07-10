@@ -373,7 +373,7 @@ function saveDB(){
   if(proj) syncProjectMeta(DB.currentProject);
   // ★ 保存审查状态（_lastReview/_reviewHistory/qualityHistory/continuity）
   const locked = getLockedProject();
-  if(locked) saveReviewState(locked.name);
+  if(locked) saveReviewStateSync(locked.name);
   // 写 localStorage 仅存元数据
   try {
     localStorage.setItem('asw_meta', JSON.stringify({
@@ -1231,6 +1231,26 @@ function saveProjectFilesToDisk(projectName, version){
 }
 
 // ─── 审查状态持久化（刷新不丢失） ───
+// 同步版：立即写 localStorage，异步写磁盘
+function saveReviewStateSync(projectName){
+  const p = DB.projects[projectName];
+  if(!p) return;
+  const state = {
+    _lastReview: p._lastReview || null,
+    _reviewHistory: p._reviewHistory || {},
+    qualityHistory: p.qualityHistory || [],
+    continuity: p.continuity || null,
+    _reviewSelectedCh: p._reviewSelectedCh || null,
+    savedAt: Date.now(),
+  };
+  // localStorage 同步写入（即时生效）
+  try {
+    localStorage.setItem('asw_review_'+projectName, JSON.stringify(state));
+  } catch(e){}
+  // 磁盘异步写入
+  saveFileToDisk(projectName, 'config', 'review_state.json', state);
+}
+
 async function saveReviewState(projectName){
   const p = DB.projects[projectName];
   if(!p) return;
@@ -2785,6 +2805,7 @@ async function saveReviewDraft(chNum){
     applied: ch._pendingApplied ? [...ch._pendingApplied] : [],
   });
   ch._pendingApplied = [];
+  saveReviewStateSync(locked.name);
   saveDB();
   toast(`✅ 已保存 v${vNum}`);
   renderers.review();
@@ -2818,6 +2839,7 @@ async function approveChapter(chNum){
     });
   }
 
+  saveReviewStateSync(locked.name);
   saveDB();
   toast(`✅ 第${chNum}章已定稿`);
   renderers.review();
@@ -2863,6 +2885,7 @@ function applyReviewSuggestion(chNum, sugIndex){
   const padded = String(chNum).padStart(3,'0');
   saveFileToDisk(locked.name, 'chapters', `chapter_${padded}.md`, editor.value);
 
+  saveReviewStateSync(locked.name);
   saveDB();
   renderers.review();
 }
@@ -3475,6 +3498,8 @@ async function startReview(projectName, chNum){
   p._lastReview = reviewRecord;
   p.qualityHistory = p.qualityHistory || [];
   p.qualityHistory.push({chapter:chNum, final_score:combinedScore, iteration:1, verdict, timestamp:Date.now()});
+  // ★ 显式保存审查状态到磁盘（即时生效，不依赖saveDB）
+  saveReviewStateSync(projectName);
   saveDB();
   renderers.review();
 
