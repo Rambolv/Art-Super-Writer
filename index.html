@@ -140,8 +140,8 @@ html,body{height:100%;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',san
 /* 历史日志样式 */
 .history-entry{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;line-height:1.6}
 .history-entry .h-round{color:var(--orange);font-weight:600;font-size:13px}
-.history-entry .h-q{color:var(--text-dim);margin:2px 0}
-.history-entry .h-a{color:#c8d6e5;margin:4px 0 4px 12px;white-space:pre-wrap;font-size:12px}
+.history-entry .h-q{color:var(--text-dim);margin:2px 0;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto}
+.history-entry .h-a{color:#c8d6e5;margin:4px 0 4px 12px;white-space:pre-wrap;font-size:12px;word-break:break-word;max-height:300px;overflow-y:auto}
 .history-entry .h-time{font-size:10px;color:var(--text-muted)}
 </style>
 </head>
@@ -11790,10 +11790,10 @@ class LLMSession {
 
   async send(opt = {}) {
     if (!this.isOpen) throw new Error('Session 已关闭');
-    const isSlot = (this.workMode === 'slot' && this.hasSent);
+    // Slot 模式：始终发送完整历史，由 llama.cpp 服务器通过 slot_id+cache_prompt 内部管理 KV 缓存
     const body = {
       model: this.model,
-      messages: isSlot ? this.newMessages : this.messages,
+      messages: this.messages,
       temperature: opt.temperature ?? 0.7,
       cache_prompt: true
     };
@@ -11815,10 +11815,10 @@ class LLMSession {
 
   async sendStream(opt = {}, onChunk) {
     if (!this.isOpen) throw new Error('Session 已关闭');
-    const isSlot = (this.workMode === 'slot' && this.hasSent);
+    // Slot 模式：始终发送完整历史
     const body = {
       model: this.model,
-      messages: isSlot ? this.newMessages : this.messages,
+      messages: this.messages,
       temperature: opt.temperature ?? 0.7,
       stream: true,
       cache_prompt: true
@@ -11892,12 +11892,25 @@ async function _callViaSession(messages, opt = {}, useStream = false, onChunk = 
     profileObj = { name: '_default', provider: prov, model, baseUrl, workMode: 'stateless' };
     _apiKeysCache['_default'] = key;
   }
-  // 获取或创建 session
+  // 获取或创建 session（统一使用 profile name 作为 key）
   const sessionKey = opt.profile || '_default';
-  if(!_llmSessions[sessionKey]){
-    _llmSessions[sessionKey] = new LLMSession(profileObj);
+  // ★ 检测外部对话是否重置 → 全新对话 → 重建 session
+  let session = _llmSessions[sessionKey];
+  if(session && messages.length > 0 && session.messages.length > 0){
+    const extFirst = messages[0];
+    const sesFirst = session.messages[0];
+    // 两种情况触发重建：①首条消息不同 ②外部消息比session短（同profile重新分析）
+    const isReset = (extFirst.role !== sesFirst.role || extFirst.content !== sesFirst.content)
+                 || (messages.length <= session.messages.length);
+    if(isReset){
+      session.close();
+      session = null;
+    }
   }
-  const session = _llmSessions[sessionKey];
+  if(!session){
+    _llmSessions[sessionKey] = new LLMSession(profileObj);
+    session = _llmSessions[sessionKey];
+  }
   // 同步外部 messages 到 session（只追加尚未同步的消息）
   const existingLen = session.messages.length;
   for(let i = existingLen; i < messages.length; i++){
@@ -12286,9 +12299,10 @@ async function analyzeProject(name, useRecommendedMax = false){
 
     // ─── 第1步：询问 LLM 上下文能力 ───
     toast('🔍 第1步：探测模型能力...');
-    logAnalysis('第1步', '探测模型上下文能力', '');
+    const _probePrompt = '请告知我模型上下文能力，用以下固定格式回复，不要包含其他文字：\n最大上下文上限:{数字}K\n推荐上下文上限:{数字}K\n建议每次输入:{数字}K\n';
+    logAnalysis('第1步', _probePrompt, '');
     const contextResponse = await callLLM([
-      {role:'user', content:'请告知我模型上下文能力，用以下固定格式回复，不要包含其他文字：\n最大上下文上限:{数字}K\n推荐上下文上限:{数字}K\n建议每次输入:{数字}K\n'}
+      {role:'user', content: _probePrompt }
     ], {temperature:0.1, profile: profile.name});
     logAnalysis('第1步 回复', '', contextResponse);
 
@@ -12325,12 +12339,14 @@ async function analyzeProject(name, useRecommendedMax = false){
       logAnalysis('模糊记忆', '从磁盘读取', _compressedFile+' ('+Math.round(totalTokens/1000)+'K)');
     }
 
-    // 启动技能学习（分析完成后才 await）
-    const skillsPromise = analyzeSkills(name, fullText, av, profile);
+    // ★ 技能学习将在分析完成后顺序执行（不在此处并发启动）
+    // const skillsPromise = analyzeSkills(name, fullText, av, profile);
 
     // 文档在容量范围内，正常处理
     let batches = [];
     const conversation = [{role:'system', content:'你是一个耐心的小说读者。我会分批发送小说内容给你阅读，你读完每批后只需回复"已读"即可。等我发出分析指令时，再基于所有已读内容做分析。\n\n重要：直接回复结果，不要输出推理过程或思考步骤。'}];
+    // ★ 记录系统角色提示词
+    logAnalysis('系统提示词', conversation[0].content, '');
     // 用建议输入大小分批，预留提示词空间
     const batchOverhead = 500; // tokens，为系统提示词+用户指令预留
     const batchSafeSize = Math.max(5000, recommendedInput - batchOverhead);
@@ -12365,6 +12381,13 @@ async function analyzeProject(name, useRecommendedMax = false){
       toast(`📖 第${i+1}/${batches.length}批：阅读中...`);
       const preview = batches[i].substring(0,80).replace(/\n/g,' ');
       conversation.push({role:'user', content:'请阅读以下第'+(i+1)+'/'+batches.length+'部分内容，读完后回复"已读"：\n\n'+batches[i]});
+      // ★ 将批次指令记录下来，展示完整的信息流
+      if(batches.length===1){
+        logAnalysis('第2步', `向LLM发送全文（${Math.round(totalTokens/1000)}K）`, '');
+      } else {
+        logAnalysis('第2步', `向LLM发送第${i+1}/${batches.length}批`, '');
+      }
+      logAnalysis('第2步 LLM输入', conversation[conversation.length-1].content, '');
       let reply;
       try {
         reply = await callLLMWithVerify(conversation, {temperature:0.1, profile: profile.name}, {
@@ -12434,29 +12457,28 @@ async function analyzeProject(name, useRecommendedMax = false){
 
     // ─── 第4步：多轮分析 ───
     toast('🧠 第1轮：阅读体验...');
-    logAnalysis('第4步-第1轮', '阅读体验', '');
     conversation.push({role:'user', content:'你已读完了整部小说的全部内容。现在请以一位普通读者的身份，给出整体的阅读体验：阅读吸引力(1-10)、情感浓度(1-10)、作用标签(引入/铺垫/冲突/转折/高潮/收尾/过渡/揭秘)。用自然语言回答，不必JSON。\n\n重要：直接给出分析结果，不要输出推理过程。'});
+    logAnalysis('第4步-第1轮', conversation[conversation.length-1].content, '');
     let r1 = await callLLM(conversation, {temperature:0.7, profile: profile.name});
     logAnalysis('第1轮 回复', '', r1);
     conversation.push({role:'assistant', content:r1});
     saveFileToDiskV(name, 'projectLog', '分析报告_第1轮_阅读体验.md', r1, av);
 
     toast('🧠 第2轮：故事结构...');
-    logAnalysis('第4步-第2轮', '故事结构分析', '');
     conversation.push({role:'user', content:'接下来分析故事结构：1. 主线脉络，按叙述顺序列出关键事件节点，标注重要性。2. 有哪些正在发展的支线，当前进展、与主线关联度(1-10)。3. 作者埋了哪些还没揭晓的伏笔，按读者最想知道的迫切程度排序。4. 世界观有什么独特设定？用自然语言回答。'});
+    logAnalysis('第4步-第2轮', conversation[conversation.length-1].content, '');
     let r2 = await callLLM(conversation, {temperature:0.7, profile: profile.name});
     logAnalysis('第2轮 回复', '', r2);
     conversation.push({role:'assistant', content:r2});
     saveFileToDiskV(name, 'projectLog', '分析报告_第2轮_故事结构.md', r2, av);
 
     toast('🧠 第3轮：角色印象...');
-    logAnalysis('第4步-第3轮', '角色印象分析', '');
     const pRef = DB.projects[name];
     const customPrompt = pRef?._useCustomCharPrompt;
     const defaultPrompt = '请识别出故事中所有出现过的角色，一个都不要漏。对每个角色标注ta是主角、反派、配角还是主要角色。然后逐一给出：一句话评价、最大特点（举例）、遇到困难时的应对方式、做决定时的风格、倾向稳赚还是冒险、最在意什么和最怕什么、和谁亲近和谁冲突、言行是否一致（有没有出人意料的行为，是否合理）、如果要让ta做违背本性的事需要什么前提。用自然语言回答。';
     const charPrompt = customPrompt ? defaultPrompt + '\n\n【额外要求】\n' + customPrompt : defaultPrompt;
     conversation.push({role:'user', content:charPrompt});
-    if(customPrompt) logAnalysis('自定义提示词', '', customPrompt.substring(0,200));
+    logAnalysis('第4步-第3轮', conversation[conversation.length-1].content, '');
     let r3 = await callLLM(conversation, {temperature:0.7, profile: profile.name});
     logAnalysis('第3轮 回复', '', r3);
     conversation.push({role:'assistant', content:r3});
@@ -12468,8 +12490,8 @@ async function analyzeProject(name, useRecommendedMax = false){
     }
 
     toast('🧠 第4轮：整体感受...');
-    logAnalysis('第4步-第4轮', '整体感受', '');
     conversation.push({role:'user', content:'现在给出整体感受：1. 目前节奏感觉如何（太平/有点慢/正好/偏快）？2. 读完你最想知道的三件事，按迫切程度排序。3. 如果下一章让你来写，你希望看到什么？4. 有什么想提醒作者注意的？用自然语言回答。'});
+    logAnalysis('第4步-第4轮', conversation[conversation.length-1].content, '');
     let r4 = await callLLM(conversation, {temperature:0.7, profile: profile.name});
     logAnalysis('第4轮 回复', '', r4);
     conversation.push({role:'assistant', content:r4});
@@ -12480,8 +12502,8 @@ async function analyzeProject(name, useRecommendedMax = false){
     const skillRpName = DB.config?.roleParams?.skill?.profile;
     if(skillRpName){ const sp = _getLLMProfileByName(skillRpName); if(sp) skillProfile = sp; }
     toast('🧠 第5轮：写作技能评价...');
-    logAnalysis('第4步-第5轮', '写作技能评价', '');
     conversation.push({role:'user', content:'最后，请以资深编辑的视角评价这部小说：1. 本文写得好的地方（优点，举例说明）。2. 本文的不足之处（缺点，举例说明并提出改进建议）。3. 给作者的综合建议（1-2条最核心的）。用自然语言回答。'});
+    logAnalysis('第4步-第5轮', conversation[conversation.length-1].content, '');
     let r5 = await callLLM(conversation, {temperature:0.7, profile: skillProfile.name});
     logAnalysis('第5轮 回复', '', r5);
     conversation.push({role:'assistant', content:r5});
@@ -12489,11 +12511,11 @@ async function analyzeProject(name, useRecommendedMax = false){
 
     // ─── 第5步：综合输出 JSON ───
     toast('📋 正在整理为结构化数据...');
-    logAnalysis('第5步', '输出结构化JSON', '');
     const jp1 = '{"plot_structure":{"trunk":[{"event":"","importance":8}],"branches":[{"name":"","status":"","relation":7}],"buds":[{"foreshadow":"","urgency":""}],"roots":[{"category":"","content":""}]}';
     const jp2 = '"characters":{"角色名":{"role":"","tag":"","traits":[],"decision_style":"","risk_attitude":"","cares_about":[],"fears":[],"bottom_line":"","relationships":{},"trust_pattern":"","conflict_style":"","consistency_issues":[],"breaking_point":"","behavioral_model":""}}';
     const jp3 = '"rhythm":{"overall_pacing":"","top_questions":[],"next_chapter_hope":""},"memo":{"writer_advice":[],"warnings":[]},"skills":{"strengths":[{"aspect":"","examples":"","detail":""}],"weaknesses":[{"aspect":"","examples":"","detail":"","improvement":""}],"overall_advice":""}';
     conversation.push({role:'user', content:'根据以上所有分析，请输出以下JSON格式的分析结果（只输出JSON，不要其他文字，必须包含skills字段）：\n{\n  '+jp1+',\n  '+jp2+',\n  '+jp3+'\n}'});
+    logAnalysis('第5步', conversation[conversation.length-1].content, '');
     let response = await callLLM(conversation, {temperature:0.3, profile: profile.name});
     // JSON 容错解析：尝试多次修复
     let data = null;
@@ -12546,7 +12568,20 @@ async function analyzeProject(name, useRecommendedMax = false){
     if(data.characters) for(const[nm,info] of Object.entries(data.characters)){
       let cid=null; for(const[id,cd] of Object.entries(p.characters||{})) if(cd.name===nm){cid=id;break}
       if(!cid){cid='char_'+String(Object.keys(p.characters||{}).length+1).padStart(3,'0'); if(!p.characters) p.characters={}; p.characters[cid]={name:nm,role:'未知',current_location:'未知',emotional_state:'平静'};}
-      Object.assign(p.characters[cid],{role:info.role,reader_tag:info.tag,traits:info.traits,decision_style:info.decision_style,risk_attitude:info.risk_attitude,cares_about:info.cares_about,fears:info.fears,bottom_line:info.bottom_line,relationships:info.relationships,trust_pattern:info.trust_pattern,conflict_style:info.conflict_style,consistency_issues:info.consistency_issues,breaking_point:info.breaking_point,behavioral_model:info.behavioral_model});
+      // ★ 容错处理：LLM可能将数组字段输出为字符串
+      const _normArr = (v) => Array.isArray(v) ? v : (v ? [String(v)] : []);
+      Object.assign(p.characters[cid],{
+        role:info.role, reader_tag:info.tag,
+        traits: _normArr(info.traits),
+        decision_style:info.decision_style, risk_attitude:info.risk_attitude,
+        cares_about: _normArr(info.cares_about),
+        fears: _normArr(info.fears),
+        bottom_line:info.bottom_line,
+        relationships: typeof info.relationships==='object'?info.relationships:{},
+        trust_pattern:info.trust_pattern, conflict_style:info.conflict_style,
+        consistency_issues: _normArr(info.consistency_issues),
+        breaking_point:info.breaking_point, behavioral_model:info.behavioral_model
+      });
       // ★ 从原始分析文本提取该角色的段落
       if(r3){
         const r3lines = r3.split('\n');
@@ -12607,8 +12642,10 @@ async function analyzeProject(name, useRecommendedMax = false){
       });
     }
     // ★ 等待技能学习完成（分析 → 技能学习，顺序执行，仅分析按钮使用此绑定）
+    // 技能学习在分析完成后才启动，不在分析过程中并发执行
     try {
-      await skillsPromise;
+      logAnalysis('📚 技能学习', '开始', '分析完成，后台启动');
+      await analyzeSkills(name, fullText, av, profile);
       logAnalysis('📚 技能学习', '完成', '');
     } catch(e) {
       logAnalysis('📚 技能学习', '失败', e.message);
@@ -13382,8 +13419,8 @@ async function _loadTensionData(projName, version){
   const name = '📊 节奏控制台';
 
   if(!hasData){
-    main.innerHTML = `<div class="page-title">${name}</div><div class="empty-state"><p>暂无节奏数据</p><p style="font-size:12px;color:var(--text-dim);margin-top:8px">请在项目管理中对项目执行「分析」后查看</p></div>`;
-    side.innerHTML = `<div class="card"><div class="card-title">📖 项目</div><div style="font-size:13px;color:var(--text-dim)">${locked.name}</div></div>`;
+    tnContent.innerHTML = `<div class="page-title">${name}</div><div class="empty-state"><p>暂无节奏数据</p><p style="font-size:12px;color:var(--text-dim);margin-top:8px">请在项目管理中对项目执行「分析」后查看</p></div>`;
+    if(tnSideInfo) tnSideInfo.innerHTML = `<div class="card"><div class="card-title">📖 ${projName}</div><div style="font-size:13px;color:var(--text-dim)">${projName}</div></div>`;
     return;
   }
 
@@ -13531,7 +13568,7 @@ async function _loadTensionData(projName, version){
 
   html += `</div>`;
 
-  main.innerHTML = html;
+  tnContent.innerHTML = html;
   if(tnSideInfo){
     tnSideInfo.innerHTML = `
       <div>🎯 节奏: ${rhythm.overall_pacing||'未知'}</div>
