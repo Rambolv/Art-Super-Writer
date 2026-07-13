@@ -5,99 +5,97 @@
 **AI 辅助长篇小说创作系统 | AI-Assisted Novel Writing System**
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)](https://python.org)
-[![HTML5](https://img.shields.io/badge/Frontend-HTML5_VanillaJS-orange?logo=html5)](https://html.spec.whatwg.org/)
+[![HTML5](https://img.shields.io/badge/Frontend-Vanilla_JS-important?logo=html5)
+[![Flask](https://img.shields.io/badge/Backend-Flask-black?logo=flask)](https://flask.palletsprojects.com/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/Rambolv/Art-Super-Writer?style=social)](https://github.com/Rambolv/Art-Super-Writer)
 
-> 让每一位创作者都能拥有专属的 AI 编辑团队
-> Give every writer their own AI editorial team
+> **让每一位创作者都能拥有专属的 AI 编辑团队**  
+> **Give every writer their own AI editorial team**
 
 </div>
 
 ---
 
-## 📖 语言 / Language
-
-本 README 完整提供中英双语。软件界面可通过右上角 **中文/EN** 按钮一键切换。
-This README is fully bilingual. The app UI supports one-click Chinese/English switching via the top-right **中文/EN** button.
-
----
-
-# 🇨🇳 中文版
-
-## 概述
-
-**超逸写手（Art Super Writer）** 是一款 AI 辅助长篇小说创作系统。它模拟了一个**完整的编辑团队工作流**：
-
-| 角色 | 职责 |
-|------|------|
-| 🧠 **AI 分析师** | 8 步多轮对话深度阅读你的小说，提取剧情结构、角色档案、节奏数据 |
-| ✍️ **AI 写作助手** | 基于分析结果，注入世界树/角色池/节奏数据作为上下文，辅助创作下一章 |
-| 🔍 **AI 审查官** | 三位不同风格审查官（严审/衡审/宽审）并行评审 + 夹逼定理投票 + 质量门禁 |
-| 📊 **AI 读者** | 从真实读者视角反馈阅读体验，标注翻页吸引力和读者想知道的问题 |
-
-> 🎯 **目标用户**：长篇小说创作者、网文作者、任何希望借助 AI 提升写作效率和质量的人。
+<p align="center">
+  <a href="#cn">🇨🇳 中文</a> · <a href="#en">🇬🇧 English</a>
+</p>
 
 ---
 
-## 功能特性（全部已完成 ✅）
+<a id="cn"></a>
+
+# 🇨🇳 超逸写手
+
+## 📋 概述
+
+**超逸写手** 是一个面向长篇小说创作者的 **AI 辅助写作系统**。与传统 AI 写作工具不同，它模拟了一整套**专业编辑团队工作流**——从读者角度的深度分析，到多风格审查官的严格评审，再到带有完整故事上下文的辅助写作。
+
+### 🎯 目标用户
+
+- 长篇小说创作者 / 网文作者
+- 希望用 AI 提升写作效率但不想失去创作掌控感的人
+- 需要专业级故事分析（结构、角色、节奏）的写作者
+
+---
+
+## ✨ 核心特性
 
 | 模块 | 功能 |
 |------|------|
-| 📁 **项目管理** | 创建/锁定/删除项目，导入 `.md`/`.txt` 文件 |
-| 🧠 **AI 读者分析** | 8 步多轮对话全自动分析：逐章阅读→故事结构→角色印象→节奏感受→综合JSON |
-| ✍️ **写作台** | 上下文注入（世界树/角色池/节奏），流式 LLM 生成，保存草稿，定稿到章节 |
-| 🔍 **审查室** | S1 机械闸（19 条正则+连续性引擎）→ S2 三审查官（严/衡/宽）→ 夹逼投票 → 质量门禁 → 修订循环 |
-| 🌳 **世界树** | 四维可视化：主干（主线）/ 枝丫（支线）/ 芽（伏笔）/ 根系（世界观设定） |
-| 🧠 **角色池** | 六芒星雷达图、角色卡折叠展开、添加/编辑/删除角色、自定义 AI 角色分析 |
-| 📊 **节奏控制台** | 逐章阅读体验数据、读者最想知道的问题、整体节奏评估、连续性指标仪表盘 |
-| 🔐 **API Key 加密** | XOR + Base64 加密 + 机器指纹绑定，双模式密钥管理 |
-| 🌐 **双语言** | 中文/English 一键切换 |
-| 💾 **本地持久化** | 全部数据写入磁盘文件夹，刷新/重启不丢失 |
-| 📋 **历史日志** | 分析日志 + 操作日志，含时间线和会话标记 |
+| 🧠 **AI 读者分析** | 8 步多轮对话深度阅读 → 剧情结构 / 角色档案 / 节奏数据 / 综合 JSON |
+| ✍️ **AI 辅助写作** | 自动注入世界树+角色池+节奏数据作为上下文，流式 LLM 生成 |
+| 🔍 **AI 审查流水线** | S1 机械闸(19条规则) → S2 三审查官(严/衡/宽) → 夹逼投票 → 质量门禁 → 自动修订 |
+| 🌳 **世界树** | 四维剧情可视化：主干(主线) / 枝丫(支线) / 芽(伏笔) / 根系(世界观) |
+| 🧠 **角色池** | 六芒星雷达图、角色卡折叠、自定义 AI 分析、一致性警告 |
+| 📊 **节奏控制台** | 逐章阅读体验曲线、读者问题追踪、连续性健康度仪表盘 |
+| 🔐 **安全存储** | API Key XOR+Base64 加密 + 机器指纹绑定 |
+| 🌐 **双语言界面** | 中文 / English 一键切换 |
+| 💾 **本地持久化** | 全部数据写入磁盘，刷新/重启不丢失，支持多项目并行 |
 
 ---
 
-## 快速开始
+## 🚀 快速开始
 
 ### 前提条件
 
 - **Python 3.10+**（[下载](https://python.org/downloads)）
-- **DeepSeek API Key**（[获取](https://platform.deepseek.com/)）
+- **一个 LLM API**（推荐 [DeepSeek](https://platform.deepseek.com/)，也支持 OpenAI 兼容 API / 本地 llama.cpp）
 
-### 安装
+### 一键启动
 
 ```bash
 git clone https://github.com/Rambolv/Art-Super-Writer.git
 cd Art-Super-Writer/standalone
 python -m venv .venv
 .venv\Scripts\activate
+pip install flask requests
 python launcher.py
 ```
 
-浏览器打开 `http://127.0.0.1:8899`。
+浏览器打开 **http://127.0.0.1:8899**
 
-> 💡 Windows 用户也可以直接双击 `start_server.bat`。
+> 💡 Windows 用户也可双击 `启动超逸写手.bat`
 
 ---
 
-## 完整使用流程
+## 📖 完整使用流程
 
-### 第一步：配置 API Key
+### 1️⃣ 配置 API Key
 
-1. 点击左侧导航「⚙️ 设置」
-2. 在「LLM 供应商」选择 **DeepSeek**
-3. 输入你的 API Key，点击「🔑 保存密钥」
-4. 点击「🔌 测试连接」确认可用
+进入 **⚙️ 设置** → 选择 LLM 供应商 → 输入 API Key → 「🔑 保存」→ 「🔌 测试连接」
 
-### 第二步：创建/导入项目
+支持多 LLM 配置：分析用 DeepSeek、写作用 Qwen 本地模型等，可分别设置。
 
-1. 点击「📁 项目管理」
-2. 右侧「🆕 创建新项目」→ 输入小说名称、故事前提、类型 → 点击「✨ 创建」
-3. 或者点击「📥 导入作品」→ 选择已有的 `.md` 或 `.txt` 章节文件 →「📥 导入」
+### 2️⃣ 创建 / 导入项目
 
-### 第三步：锁定项目
+进入 **📁 项目管理**：
+- **新建**：输入名称、故事前提、类型 → 「✨ 创建」
+- **导入**：选择 `.md` / `.txt` 文件 → 「📥 导入」（自动设为第一章）
 
-1. 在项目列表中，找到你的项目
+### 3️⃣ 锁定项目
+
+在项目列表中点击「🔒 锁定」，锁定后所有模块以该项目为核心运作。
 2. 点击「🔒 锁定」按钮
 3. 锁定后，所有功能模块（写作台/审查室/世界树/角色池等）均以该项目为核心运作
 
@@ -182,22 +180,227 @@ python launcher.py
 
 ---
 
-## 项目结构
+## 🏗️ 项目结构
 
 ```
 standalone/
-├── index.html              # 主应用（单文件，~5300行）
-├── server.py               # Python HTTP API 服务器（端口 8899）
-├── launcher.py             # 一键启动脚本
-├── 启动超逸写手.bat          # 一键启动批处理
-├── start_server.bat        # 仅启动服务器
+├── index.html              # 💎 单文件前端应用（~16K 行，CSS+HTML+JS）
+├── server.py               # 🐍 Python HTTP API 服务器（Flask，端口 8899）
+├── launcher.py             # 🚀 一键启动脚本
+├── 启动超逸写手.bat          # 🪟 Windows 一键启动
+├── start_server.bat        # 🪟 仅启动服务器
 │
-├── projects/               # 所有小说项目数据
+├── docs/                   # 📚 开发文档
+│   ├── 设计决策记录.md       # 所有技术决策记录
+│   ├── 快速开发文档.md       # 开发指南
+│   ├── LLM交互流程文档.md    # LLM 提示词与交互流程
+│   └── 审查室数据流图.md     # 审查模块数据流
+│
+├── projects/               # 📂 小说项目数据（.gitignore 排除）
 │   └── {项目名}/
-│       ├── chapters/        # 章节 .md 文件
-│       ├── drafts/          # 写作草稿
-│       ├── reviews/         # 审查记录 JSON
-│       ├── characters/      # 角色独立 JSON
+│       ├── project.json     # 项目元数据
+│       ├── chapters/        # 章节文件 .md
+│       ├── drafts/          # 草稿
+│       ├── worldTreeData/   # 世界树分析结果（版本化）
+│       ├── characterProfiles/ # 角色分析结果（版本化）
+│       ├── tensionReports/  # 节奏分析结果（版本化）
+│       ├── fuzzyMemory/     # 模糊记忆上下文
+│       ├── projectLog/      # 分析日志（版本化）
+│       ├── skills/          # AI 学习的写作技巧
+│       ├── config/          # 审查状态、故事状态
+│       └── story_state.json # 角色位置/情节线/伏笔/时间线
+│
+└── .gitignore
+```
+
+---
+
+## 💡 架构亮点
+
+### 纯前端 + 本地服务器架构
+
+```
+浏览器 (index.html)              Python 服务器 (server.py)
+┌─────────────────────┐         ┌──────────────────────┐
+│  SPA 应用             │  HTTP  │  文件 API              │
+│  • 所有 UI 逻辑       │ ←────→ │  • 读/写/删文件         │
+│  • LLM 调用（直接）    │        │  • 项目元数据管理       │
+│  • 数据分析与渲染      │        │  • 锁定状态管理         │
+│  • localStorage 缓存  │        │  • 文件夹创建           │
+└─────────────────────┘         └──────────────────────┘
+       │                                │
+       │  LLM API (直接浏览器调用)        │  磁盘
+       ▼                                ▼
+  DeepSeek / OpenAI / ...         projects/{项目名}/
+```
+
+- **LLM 调用直接从浏览器发出**，不经过后端代理（避免服务器成为瓶颈）
+- **磁盘是主存储**，localStorage 仅做缓存（服务器离线时可用）
+- **纯静态前端**，可部署到任何静态服务器
+
+### 版本化分析结果
+
+每次 AI 分析生成一个版本号，数据写入 `worldTreeData/v{N}/`、`characterProfiles/v{N}/` 等子文件夹。支持在模块顶部切换查看历史版本。
+
+### SKILL 系统（写作技巧学习）
+
+AI 分析完成后，自动从作品中学习写作技巧并保存到 `skills/` 文件夹。写作时可选择导入特定 SKILL 作为 LLM 提示词上下文。
+
+---
+
+## 🔧 配置多个 LLM
+
+进入 **⚙️ 设置 → 分角色参数配置**，可为不同角色指定不同 LLM：
+
+| 角色 | 推荐 LLM | 说明 |
+|------|----------|------|
+| 🔍 分析 | DeepSeek V4 | 上下文大，成本低 |
+| ✍️ 写作 | 任意 | 按写作风格偏好选择 |
+| 🔴 严审 | DeepSeek / GPT | 严格标准 |
+| 🟡 衡审 | 同上 | 综合评价 |
+| 🟢 宽审 | 同上 | 关注亮点 |
+| 📚 技能学习 | 与分析一致 | 后台运行 |
+
+也支持**本地模型**（如通过 llama.cpp 启动的 Qwen），在设置中添加供应商为 `http://127.0.0.1:8080/v1` 即可。
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 PR。如果您想贡献代码，请先阅读 `docs/` 目录下的开发文档。
+
+---
+
+## 📄 许可
+
+[MIT](LICENSE)
+
+---
+
+<a id="en"></a>
+
+# 🇬🇧 Art Super Writer
+
+## 📋 Overview
+
+**Art Super Writer** is an AI-assisted novel writing system designed for long-form fiction creators. Unlike conventional AI writing tools, it simulates a **complete professional editorial workflow**—from deep reader-perspective analysis, through multi-style reviewer scrutiny, to context-rich AI-assisted writing.
+
+### 🎯 Who It's For
+
+- Novelists and web fiction authors
+- Writers who want AI efficiency without losing creative control
+- Anyone needing professional-grade story analysis (structure, characters, pacing)
+
+---
+
+## ✨ Features
+
+| Module | Description |
+|--------|-------------|
+| 🧠 **AI Reader Analysis** | 8-step multi-turn dialogue → plot structure / character profiles / pacing data / comprehensive JSON |
+| ✍️ **AI Writing Assistant** | Auto-injects world tree + character pool + pacing data as context, streaming LLM generation |
+| 🔍 **AI Review Pipeline** | S1 Mechanical Gate(19 rules) → S2 Three Reviewers → Squeeze Voting → Quality Gate → Auto Revision |
+| 🌳 **World Tree** | Quad-dimensional visualization: Trunk(main plot) / Branches(subplots) / Buds(foreshadowing) / Roots(worldbuilding) |
+| 🧠 **Character Pool** | Hexagram radar chart, collapsible cards, custom AI analysis, consistency warnings |
+| 📊 **Pacing Console** | Chapter-by-chapter engagement curves, reader questions tracker, continuity health dashboard |
+| 🔐 **Secure Storage** | XOR+Base64 API key encryption with machine fingerprint binding |
+| 🌐 **Bilingual UI** | Chinese / English one-click switch |
+| 💾 **Local Persistence** | All data written to disk, survives refresh/restart, multi-project support |
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Python 3.10+** ([Download](https://python.org/downloads))
+- **An LLM API key** ([DeepSeek](https://platform.deepseek.com/) recommended, also supports OpenAI-compatible APIs / local llama.cpp)
+
+### One-Click Launch
+
+```bash
+git clone https://github.com/Rambolv/Art-Super-Writer.git
+cd Art-Super-Writer/standalone
+python -m venv .venv
+.venv\Scripts\activate
+pip install flask requests
+python launcher.py
+```
+
+Open **http://127.0.0.1:8899** in your browser.
+
+> 💡 Windows users can also double-click `启动超逸写手.bat`.
+
+---
+
+## 📖 Usage Guide
+
+### 1️⃣ Configure API Key
+
+Go to **⚙️ Settings** → Select LLM provider → Enter API Key → **Save** → **Test Connection**
+
+Supports multiple LLM configurations: use DeepSeek for analysis, Qwen local model for writing, etc.
+
+### 2️⃣ Create / Import Project
+
+Go to **📁 Project Management**:
+- **Create**: Enter name, premise, genre → **Create**
+- **Import**: Select `.md` / `.txt` files → **Import** (auto-sets as Chapter 1)
+
+### 3️⃣ Lock Project
+
+Click **Lock** on your project. All modules operate around the locked project.
+
+### 4️⃣ AI Analysis
+
+Click **Re-analyze**. The AI performs an 8-step multi-turn dialogue analysis. Results appear in World Tree, Character Pool, and Pacing Console.
+
+### 5️⃣ AI-Assisted Writing
+
+Go to **✍️ Writing Desk** → Enter writing direction → Set temperature → Set word count target → **Start Writing**
+
+The AI auto-injects world tree data, character profiles, pacing data, and writing skills as context.
+
+### 6️⃣ Review & Revise
+
+Go to **🔍 Review Room** → Select chapter → **Review**
+
+The pipeline runs: S1 Mechanical Gate → S2 Three Reviewers → Squeeze Voting → Quality Gate → Auto Revision (up to 3 iterations).
+
+---
+
+## 🏗️ Architecture
+
+```
+Browser (index.html)              Python Server (server.py)
+┌─────────────────────┐         ┌──────────────────────┐
+│  SPA Application     │  HTTP  │  File API             │
+│  • All UI logic      │ ←────→ │  • Read/Write/Delete  │
+│  • Direct LLM calls  │        │  • Project metadata   │
+│  • Data rendering    │        │  • Lock state         │
+│  • localStorage      │        │  • Folder creation    │
+└─────────────────────┘         └──────────────────────┘
+       │                                │
+       │  LLM API (browser direct)       │  Disk
+       ▼                                ▼
+  DeepSeek / OpenAI / ...         projects/{project}/
+```
+
+- **LLM calls are made directly from the browser** (no backend proxy)
+- **Disk is primary storage**, localStorage is cache-only
+- **Pure static frontend**, deployable anywhere
+
+---
+
+## 🤝 Contributing
+
+Issues and PRs welcome. Please read `docs/` for development documentation.
+
+---
+
+## 📄 License
+
+[MIT](LICENSE)
 │       ├── characterProfiles/ # 角色档案/批量备份
 │       ├── worldTreeData/   # 世界树 JSON
 │       ├── tensionReports/  # 节奏报告

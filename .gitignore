@@ -19,3 +19,26 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Project user data (exclude novel content & analysis)
+projects/__asr_writer_meta__/apikeys.json
+projects/__lock__
+projects/*/chapters/
+projects/*/drafts/
+projects/*/worldTreeData/
+projects/*/characterProfiles/
+projects/*/characterAnalysis/
+projects/*/tensionReports/
+projects/*/fuzzyMemory/
+projects/*/projectLog/
+projects/*/config/
+projects/*/story_state.json
+projects/*/reviewHistory/
+projects/*/reviews/
+projects/*/referenceNotes/
+projects/*/styleMemory/
+projects/*/characters/
+projects/*/project.json
+
+# But keep SKILL files (AI-generated writing techniques)
+!projects/*/skills/

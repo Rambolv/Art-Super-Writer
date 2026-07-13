@@ -268,10 +268,15 @@ class RequestHandler(BaseHTTPRequestHandler):
             name = data.get("project", "").strip()
             subfolder = data.get("folder", "").strip()
             filename = data.get("filename", "").strip()
-            if not all([name, subfolder, filename]):
+            if not all([name, filename]):
                 self._error(400, "缺少参数")
                 return
-            filepath = PROJECTS_DIR / name / subfolder / filename
+            filepath = PROJECTS_DIR / name / (subfolder or "") / filename
+            filepath = filepath.resolve()
+            # 安全检查：禁止目录遍历
+            if not str(filepath).startswith(str(PROJECTS_DIR.resolve())):
+                self._error(403, "禁止访问")
+                return
             if not filepath.exists():
                 self._error(404, "文件不存在")
                 return
