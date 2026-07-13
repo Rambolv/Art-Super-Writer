@@ -11871,99 +11871,50 @@ class LLMSession {
 }
 
 // ═══════ LLM 调用 ═══════
-async function callLLM(messages, opt = {}){
-  // 支持通过 opt.profile 指定 LLM 配置
-  let prov, key, model, baseUrl;
+/** 跨调用共享的 LLMSession 缓存（两种模式均使用，避免重复创建） */
+const _llmSessions = {};
+
+/** 获取或创建 LLMSession，同步外部 messages */
+async function _callViaSession(messages, opt = {}, useStream = false, onChunk = null){
+  let profileObj = null;
   if(opt.profile){
-    const p = _getLLMProfileByName(opt.profile);
-    if(!p) throw new Error('LLM配置不存在: '+opt.profile);
-    prov = p.provider;
-    key = _apiKeysCache[p.name];
-    model = p.model;
-    baseUrl = p.baseUrl || PROVIDER_CONFIG[p.provider]?.base_url || 'https://api.deepseek.com';
-  } else {
-    prov = DB.config?.provider || 'deepseek';
-    key = _apiKeysCache[prov];
-    model = opt.model || DB.config?.model || 'deepseek-v4-flash';
-    baseUrl = PROVIDER_CONFIG[prov]?.base_url || 'https://api.deepseek.com';
-    if(prov==='custom') baseUrl = DB.config?.customUrl || baseUrl;
+    profileObj = _getLLMProfileByName(opt.profile);
+    if(!profileObj) throw new Error('LLM配置不存在: '+opt.profile);
   }
-  // 本地地址（127.0.0.1/localhost）不需要 API Key
-  const isLocal = baseUrl && (baseUrl.includes('127.0.0.1') || baseUrl.includes('localhost'));
-  if(!key && !isLocal){toast('请先在设置中保存 API Key','error');throw new Error('no key')}
-  const resp = await fetch(baseUrl.replace(/\/+$/,'')+'/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-    body:JSON.stringify({model,messages,temperature:opt.temperature??0.7})
-  });
-  const data = await resp.json();
-  if(!resp.ok) throw new Error(data.error?.message||'API错误:'+resp.status);
-  return data.choices[0].message.content;
+  if(!profileObj){
+    // 无指定 profile 时用默认配置创建临时对象
+    const prov = DB.config?.provider || 'deepseek';
+    const key = _apiKeysCache[prov];
+    const model = opt.model || DB.config?.model || 'deepseek-v4-flash';
+    const baseUrl = (PROVIDER_CONFIG[prov]?.base_url || 'https://api.deepseek.com').replace(/\/+$/,'');
+    const isLocal = baseUrl.includes('127.0.0.1') || baseUrl.includes('localhost');
+    if(!key && !isLocal){toast('请先在设置中保存 API Key','error');throw new Error('no key')}
+    profileObj = { name: '_default', provider: prov, model, baseUrl, workMode: 'stateless' };
+    _apiKeysCache['_default'] = key;
+  }
+  // 获取或创建 session
+  const sessionKey = opt.profile || '_default';
+  if(!_llmSessions[sessionKey]){
+    _llmSessions[sessionKey] = new LLMSession(profileObj);
+  }
+  const session = _llmSessions[sessionKey];
+  // 同步外部 messages 到 session（只追加尚未同步的消息）
+  const existingLen = session.messages.length;
+  for(let i = existingLen; i < messages.length; i++){
+    const msg = messages[i];
+    if(msg.role === 'system') session.system(msg.content);
+    else if(msg.role === 'user') session.user(msg.content);
+    else if(msg.role === 'assistant') session.assistant(msg.content);
+  }
+  return useStream ? session.sendStream(opt, onChunk) : session.send(opt);
 }
 
-/**
- * 流式 LLM 调用，实时通过 onChunk 回调返回内容
- * @param {Array} messages - 对话消息
- * @param {Object} opt - {max_tokens, temperature, profile}
- * @param {Function} onChunk - 每次收到新内容时回调(当前完整文本)
- */
+async function callLLM(messages, opt = {}){
+  return _callViaSession(messages, opt, false);
+}
+
 async function callLLMStream(messages, opt = {}, onChunk){
-  let prov, key, model, baseUrl;
-  if(opt.profile){
-    const p = _getLLMProfileByName(opt.profile);
-    if(!p) throw new Error('LLM配置不存在: '+opt.profile);
-    prov = p.provider;
-    key = _apiKeysCache[p.name];
-    model = p.model;
-    baseUrl = p.baseUrl || PROVIDER_CONFIG[p.provider]?.base_url || 'https://api.deepseek.com';
-  } else {
-    prov = DB.config?.provider || 'deepseek';
-    key = _apiKeysCache[prov];
-    model = opt.model || DB.config?.model || 'deepseek-v4-flash';
-    baseUrl = PROVIDER_CONFIG[prov]?.base_url || 'https://api.deepseek.com';
-    if(prov==='custom') baseUrl = DB.config?.customUrl || baseUrl;
-  }
-  // 本地地址不需要 API Key
-  const isLocal = baseUrl && (baseUrl.includes('127.0.0.1') || baseUrl.includes('localhost'));
-  if(!key && !isLocal){toast('请先在设置中保存 API Key','error');throw new Error('no key')}
-
-  const resp = await fetch(baseUrl.replace(/\/+$/,'')+'/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-    body:JSON.stringify({model,messages,temperature:opt.temperature??0.7,stream:true})
-  });
-  if(!resp.ok){
-    const err = await resp.json().catch(()=>({}));
-    throw new Error(err.error?.message||'API错误:'+resp.status);
-  }
-
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  let fullContent = '';
-  let buffer = '';
-
-  while(true){
-    const {done, value} = await reader.read();
-    if(done) break;
-    buffer += decoder.decode(value, {stream: true});
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-    for(const line of lines){
-      const trimmed = line.trim();
-      if(!trimmed || !trimmed.startsWith('data:')) continue;
-      const data = trimmed.slice(5).trim();
-      if(data === '[DONE]') continue;
-      try {
-        const json = JSON.parse(data);
-        const delta = json.choices?.[0]?.delta?.content || '';
-        if(delta){
-          fullContent += delta;
-          if(onChunk) onChunk(fullContent);
-        }
-      } catch(e){}
-    }
-  }
-  return fullContent;
+  return _callViaSession(messages, opt, true, onChunk);
 }
 
 /**
