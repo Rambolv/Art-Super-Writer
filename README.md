@@ -2,9 +2,15 @@
 
 # 🖋️ 超逸写手 · Art Super Writer
 
-**你的私人 AI 编辑团队。读完你的小说，再帮你接着写。**
+**超能写手，飘逸流畅**
 
-*Your private AI editorial team. Reads your novel, then writes with you.*
+*——你的私人AI写作团队*
+
+<br>
+
+**Super writer, flowing freely.**
+
+*——Your private AI writing team*
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
@@ -50,6 +56,7 @@
 | 🧠 **角色池** | 展示角色性格、行为模式、关系网、一致性警告。可做深度分析 |
 | 📊 **节奏控制台** | 展示每章吸引力、情感浓度、连续性健康数据 |
 | 🔍 **审查室** | S1 机械闸 + S2 三审官（13 维度评分）+ 夹逼投票 + 质量门禁 |
+| 🤖 **全自动写作** | 全自动长篇写作（付费功能） |
 | 📋 **历史日志** | 分析进行中看实时进度、分析完回看完整对话记录 |
 | ⚙️ **设置** | 管理 LLM 配置、分角色指定不同 LLM、质量门禁阈值、13 维度权重 |
 
@@ -434,6 +441,9 @@ DeepSeek、OpenAI 兼容接口、本地 llama.cpp。任何兼容 OpenAI Chat Com
 **数据怎么备份？**
 复制整个 `projects/` 文件夹就行。
 
+**全自动写作是什么？**
+左边栏「🤖 全自动长篇写作」是付费功能。你只需要提供书名和大致方向，AI 自动完成从分析到写作的全流程，输出完整长篇。目前是占位页面，具体请咨询作者。
+
 ---
 
 <br>
@@ -483,6 +493,7 @@ Sidebar → ⚙️ Settings → Add LLM → Provider: **DeepSeek** → Base URL:
 | 🧠 **Characters** | Personality tags, behavior models, relationships, consistency warnings. Deep analysis available |
 | 📊 **Rhythm Console** | Per-chapter engagement, emotional intensity, continuity health |
 | 🔍 **Review Room** | S1 mechanical scan + S2 three reviewers (13 dims) + squeeze vote + quality gate |
+| 🤖 **Auto Writer** | Full-auto long novel writing (paid feature) |
 | 📋 **History Log** | Real-time progress during analysis, full conversation logs after |
 | ⚙️ **Settings** | Manage LLM configs, assign different LLMs per role, quality gate thresholds, 13-dimension weights |
 
@@ -599,6 +610,9 @@ When you're unhappy after finalization: select chapter → review → wait for A
 **Multiple books?** Yes. Unlock → lock another.
 
 **Backup?** Copy the `projects/` folder.
+
+**What is Auto Writer?**
+The "🤖 Auto Writer" button in the sidebar is a paid feature. Provide a book title and general direction, and the AI handles everything—from analysis to writing a complete long novel. Currently a placeholder page. Contact the author for details.
 
 ---
 
