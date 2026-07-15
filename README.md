@@ -40,6 +40,21 @@
 
 ---
 
+## 功能一览
+
+| 模块 | 做什么 |
+|------|--------|
+| 📁 **项目管理** | 创建项目、导入章节文件（.txt/.md）、锁定/解锁、AI 分析全部章节 |
+| ✍️ **写作台** | 写提示词 → AI 阅读全文 → 生成新章节 → 编辑 → 定稿 |
+| 🌳 **世界树** | 展示故事结构：主线节点、支线进度、伏笔排序、世界观设定 |
+| 🧠 **角色池** | 展示角色性格、行为模式、关系网、一致性警告。可做深度分析 |
+| 📊 **节奏控制台** | 展示每章吸引力、情感浓度、连续性健康数据 |
+| 🔍 **审查室** | S1 机械闸 + S2 三审官（13 维度评分）+ 夹逼投票 + 质量门禁 |
+| 📋 **历史日志** | 分析进行中看实时进度、分析完回看完整对话记录 |
+| ⚙️ **设置** | 管理 LLM 配置、分角色指定不同 LLM、质量门禁阈值、13 维度权重 |
+
+---
+
 # 第一部分：傻瓜教程
 
 ---
@@ -255,13 +270,93 @@ AI 生成的内容会显示在 **「📝 生成结果」** 框里。
 
 ---
 
+<a id="设置页详解"></a>
+
+## 七、设置页各项设定详解
+
+左边栏 ⚙️ **设置** 打开后，你会看到以下内容。
+
+### 1. LLM 配置管理
+
+**添加 LLM：**
+
+| 字段 | 说明 |
+|------|------|
+| 名称 | 你给这个配置取的名字，比如「DeepSeek 写作」「本地分析」 |
+| 供应商 | DeepSeek / OpenAI 兼容 / 自托管。选 DeepSeek 地址自动填好 |
+| 地址 | API 地址。DeepSeek 是 `https://api.deepseek.com`，本地模型是 `http://127.0.0.1:8080/v1` |
+| 模型 | 模型名。DeepSeek 填 `deepseek-v4-flash`（或 `deepseek-v4-pro`，更强）。本地模型按你下载的文件名填 |
+| API Key | 粘贴你的 Key。点「👁️」可切换显示/隐藏。点「📋」从剪贴板粘贴 |
+| 工作模式 | **⚡ Slot**（推荐，省 Token）或 **🔵 Stateless**（兼容性强）。不确定选 Stateless |
+
+> Slot 模式下，AI 第一次读完你的全文后会缓存，后续只算新增内容，重复内容不重复计费。DeepSeek 和 llama.cpp 都支持。
+
+**管理已有配置：** 每张卡片显示 LLM 名称、供应商、地址、模型、工作模式、连接状态。你可以：
+- ☑ **激活**——一个配置设为激活后，新添加角色会默认使用它
+- 🗑️ **删除**——删掉不再用的配置
+- 点击卡片直接编辑
+
+### 2. 分角色参数（🔥 核心省钱功能）
+
+不同任务可以分别指定不同的 LLM，不需要全都用同一个。
+
+| 角色 | 干什么的 | 建议 |
+|------|---------|------|
+| ✍️ 写作 | 写新章节 | DeepSeek API（质量好） |
+| 🔍 分析 | 分析全部章节，生成世界树/角色/节奏数据 | 本地模型（免费但慢）或 API |
+| 🔴 严审 | 三审官之一，对所有子项严格评分 | 本地模型（免费）或 API |
+| 🟡 衡审 | 三审官之一，审查核心子项 | 同上 |
+| 🟢 宽审 | 三审官之一，只看大局维度 | 同上 |
+| 🗳️ 投票 | 三审意见不一致时投票裁决 | 同上 |
+| 📚 技能学习 | AI 自动从你的小说里学写作技巧 | 同上 |
+
+每个角色都可以选择已保存的任意 LLM 配置，并且可以分别设置温度。
+
+> **省钱组合：** 写作 → DeepSeek API（保质量），分析 + 三审 + 投票 + 技能学习 → 本地 LLM（全免费）。
+
+### 3. 质量门禁
+
+只有审查室用。控制审查结果怎么判定：
+
+| 设置 | 作用 | 推荐值 |
+|------|------|--------|
+| 通过阈值 | ≥ 这个分数自动通过 | 75 |
+| 修订阈值 | ≥ 这个分数需要修订再审 | 50 |
+| 最大修订次数 | 最多自动修订几轮 | 3 |
+| 严审维度最低分 | 低于这个分数直接标记严重 | 5 |
+
+判定逻辑：
+- ≥ 通过阈值 → ✅ 通过
+- ≥ 修订阈值 → 🔄 建议修订（AI 自动改，最多改 N 轮）
+- < 修订阈值 → 👤 需要你人工判断
+
+### 4. 审查权重
+
+三个审稿官的评分权重：
+
+| 审稿官 | 默认权重 | 含义 |
+|--------|---------|------|
+| 🔴 严审 | 1.0 | 最严格，权重最高 |
+| 🟡 衡审 | 0.7 | 中等，平衡派 |
+| 🟢 宽审 | 0.4 | 宽松，权重最低 |
+
+### 5. 13 维度权重
+
+审查时从 13 个维度打分，每个维度的权重可以单独调整：
+
+情节(1.5) · 角色(1.5) · 对话(1.2) · 节奏(1.1) · 文风(1.0) · 一致性(1.4) · 情感冲击(1.2) · 原创性(0.9) · 可读性(1.0) · AI味检测(1.3) · 角色心理(1.6) · 社会互动(1.4) · 例外真实性(1.3)
+
+> 数字越大说明这个维度越重要。默认值基本合理，一般不需要改。
+
+---
+
 # 第三部分：注意事项
 
 ---
 
-<a id="七关于-llm-的选择"></a>
+<a id="八关于-llm-的选择"></a>
 
-## 七、关于 LLM 的选择
+## 八、关于 LLM 的选择
 
 ### 最推荐：全部用 DeepSeek API
 
@@ -271,7 +366,7 @@ AI 生成的内容会显示在 **「📝 生成结果」** 框里。
 
 ### 如果你想省钱（有显卡）
 
-设置里可以把不同任务指定不同的 AI：
+设置里分角色参数那里，把不同任务指定不同的 AI：
 
 | 任务 | 建议用 |
 |------|--------|
@@ -289,9 +384,9 @@ AI 生成的内容会显示在 **「📝 生成结果」** 框里。
 
 ---
 
-<a id="八重要提示"></a>
+<a id="九重要提示"></a>
 
-## 八、重要提示
+## 九、重要提示
 
 - **定稿覆盖保护：** 已经定稿的章节再次定稿会弹出确认框，防止误覆盖
 - **数据安全：** 所有数据存在硬盘上的 `projects/` 文件夹。崩溃就刷新浏览器，一字不丢。备份只需复制这个文件夹
@@ -378,7 +473,85 @@ Sidebar → ⚙️ Settings → Add LLM → Provider: **DeepSeek** → Base URL:
 
 ---
 
-## Writer Desk Workflow
+## Feature Overview
+
+| Module | What It Does |
+|--------|-------------|
+| 📁 **Project Manager** | Create/import/lock projects, AI analysis of ALL chapters |
+| ✍️ **Writer Desk** | Write prompts → AI reads full novel → generates chapter → edit → finalize |
+| 🌳 **World Tree** | Story structure: main plot, subplots, foreshadowing, world-building |
+| 🧠 **Characters** | Personality tags, behavior models, relationships, consistency warnings. Deep analysis available |
+| 📊 **Rhythm Console** | Per-chapter engagement, emotional intensity, continuity health |
+| 🔍 **Review Room** | S1 mechanical scan + S2 three reviewers (13 dims) + squeeze vote + quality gate |
+| 📋 **History Log** | Real-time progress during analysis, full conversation logs after |
+| ⚙️ **Settings** | Manage LLM configs, assign different LLMs per role, quality gate thresholds, 13-dimension weights |
+
+---
+
+## Settings Guide
+
+### 1. LLM Configuration
+
+**Add LLM:**
+
+| Field | Description |
+|-------|-------------|
+| Name | Your label, e.g. "DeepSeek Writing", "Local Analysis" |
+| Provider | DeepSeek / OpenAI-compatible / Self-hosted |
+| Base URL | `https://api.deepseek.com` for DeepSeek, `http://127.0.0.1:8080/v1` for local |
+| Model | `deepseek-v4-flash` (or `deepseek-v4-pro` for stronger). Local models use the GGUF filename |
+| API Key | Paste your key. Toggle 👁️ to show/hide. Click 📋 to paste from clipboard |
+| Work Mode | **⚡ Slot** (recommended, saves tokens) or **🔵 Stateless** (best compatibility). Unsure? Pick Stateless |
+
+**Manage configs:** Each card shows name, provider, address, model, mode, connection status. You can:
+- ☑ **Activate** — new roles use this by default
+- 🗑️ **Delete** — remove unused config
+- Click to edit
+
+### 2. Per-Role Parameters (🔥 Core Money-Saving Feature)
+
+Assign different LLMs to different tasks:
+
+| Role | What It Does | Recommended |
+|------|-------------|------------|
+| ✍️ Writer | Writes new chapters | DeepSeek API (quality) |
+| 🔍 Analysis | Analyzes all chapters, generates World Tree/Characters/Rhythm | Local LLM (free, slower) or API |
+| 🔴 Strict / 🟡 Balanced / 🟢 Lenient | Three reviewers (13 dims each) | Local LLM (free) or API |
+| 🗳️ Voter | Breaks ties when reviewers disagree | Local LLM (free) or API |
+| 📚 Skill Learner | AI auto-learns writing tips from your novel | Local LLM (free) or API |
+
+Each role can select any saved LLM config and set its own temperature.
+
+> **Best combo:** Writer → API (quality). Analysis + Reviews + Vote + Learning → local LLM (all free).
+
+### 3. Quality Gate
+
+Controls review pass/fail logic:
+
+| Setting | What It Does | Default |
+|---------|-------------|---------|
+| Pass threshold | ≥ this score = auto pass | 75 |
+| Revise threshold | ≥ this score = revise | 50 |
+| Max revision rounds | How many auto-revision cycles | 3 |
+| Min dimension score | Below this = critical flag | 5 |
+
+Logic: ≥ pass → ✅ Pass. ≥ revise → 🔄 Revise (AI auto-fixes). < revise → 👤 Manual review.
+
+### 4. Reviewer Weights
+
+| Reviewer | Default | Meaning |
+|----------|---------|---------|
+| 🔴 Strict | 1.0 | Strictest, highest weight |
+| 🟡 Balanced | 0.7 | Middle ground |
+| 🟢 Lenient | 0.4 | Lenient, lowest weight |
+
+### 5. 13-Dimension Weights
+
+All adjustable: Plot(1.5) · Character(1.5) · Dialogue(1.2) · Pacing(1.1) · Style(1.0) · Consistency(1.4) · Emotional Impact(1.2) · Originality(0.9) · Readability(1.0) · AI Detection(1.3) · Character Psychology(1.6) · Social Interaction(1.4) · Exceptional Authenticity(1.3)
+
+> Higher = more important. Defaults are reasonable—usually no need to change.
+
+---
 
 | Step | Do This |
 |------|---------|
