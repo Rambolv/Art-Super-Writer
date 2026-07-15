@@ -505,6 +505,26 @@ Sidebar → ⚙️ Settings → Add LLM → Provider: **DeepSeek** → Base URL:
 
 ---
 
+## Why This Instead of Just Chatting with AI?
+
+Open a DeepSeek chat to write a novel? The problem: **as your story grows, the AI forgets previous content—dropping foreshadowing and mixing up characters.**
+
+Art Super Writer automates what you'd otherwise do manually.
+
+| Problem | Manual Writing | Direct AI Chat | Art Super Writer + API |
+|---------|--------------|---------------|----------------------|
+| Long stories lose consistency | 😩 Rely on memory, harder as story grows | 😩 Manual copy-paste every chapter, still forgets | ✅ AI auto-reads ALL your novel before writing |
+| Character inconsistency | 😩 Manual character sheets, often outdated | 😩 Characters drift, dead ones return | ✅ Character profiles auto-managed. Dead stays dead |
+| Quality feedback | 😩 Self-review has blind spots | 😩 No idea if writing is good | ✅ Three AI reviewers score 13 dimensions + give suggestions |
+| Story structure | 😩 Outline drifts as you write | 😩 Subplots lost, foreshadowing forgotten | ✅ World Tree auto-tracks: main plot, subplots, foreshadowing |
+| Token costs | N/A | 😩 Every chat re-bills, Tokens pile up | ✅ Dual mode: ⚡Slot warms context once (saves Tokens, needs model support) or 🔵Stateless for compatibility |
+| Writing style | 😩 Hard to maintain | 😩 AI writes differently each time | ✅ SKILL system: you set rules, AI follows. AI also auto-learns |
+| Context too long = AI dumber | N/A | 😩 Long chats lower AI quality | ✅ Data saved to local disk + fuzzy memory: smart compression keeps AI smart |
+| Reader experience | 😩 Rely on friends' feedback | 😩 No idea how readers feel per chapter | ✅ Rhythm Console: which chapters grip, which might lose readers |
+| Capability limits | N/A | 😩 One model does everything, limited | ✅ Multiple models can work together as a team |
+
+---
+
 ## Feature Overview
 
 | Module | What It Does |
@@ -586,38 +606,168 @@ All adjustable: Plot(1.5) · Character(1.5) · Dialogue(1.2) · Pacing(1.1) · S
 
 ---
 
-| Step | Do This |
-|------|---------|
-| ① **Write a prompt** | In the "写作方向" text box, tell AI what this chapter should be about |
-| ② **Click Send** | Button says "📤 发送给 LLM" — AI will read all previous chapters, then write |
-| ③ **View result** | Read AI output in the result box, edit directly |
-| ④ **Finalize** | Click "📌 定稿" to save as an official chapter |
+## Writer Desk — Write New Chapters
+
+### Step 1: Write a Prompt
+
+In the big text box labeled "写作方向" (Writing Direction), tell AI what this chapter should be about.
+
+✅ **Good example:**
+```
+The protagonist infiltrates the ancient city, discovers a hidden passage leading to a sealed chamber. Pursuers arrive, forcing entry. Requirements: suspenseful atmosphere, environmental description building tension, leave the chamber's secret unresolved.
+```
+
+❌ **Bad example:**
+```
+Write chapter 3
+```
+
+**The more specific, the better.** Include key events, character interactions, and atmosphere requirements.
+
+Click "💾 Save" to save your prompt to disk so it survives page switching.
+
+### Step 2: Let AI Write
+
+Click **"📤 发送给 LLM"** button. (Don't worry about the name—it means "start writing.")
+
+The AI will:
+
+| Step | What It Does | Duration |
+|------|-------------|----------|
+| ① Probe | Ask AI its context limit | 1-2 sec |
+| ② Compress | If novel is long, auto-compress old chapters into summaries | seconds-minutes |
+| ③ **Batch-read** | **Send your ENTIRE novel to AI in chunks**—the critical step | 10 sec-minutes (longer = more chapters) |
+| ④ Inject | Feed World Tree, character data, SKILLs to AI | instant |
+| ⑤ Generate | AI writes the new chapter, displayed word by word | 30 sec-minutes |
+
+**Step ③ is the most important.** Only after reading your full story can AI write consistently.
+
+### Step 3: View & Edit
+
+AI output appears in the **"📝 生成结果"** box.
+
+- Edit directly in this box. **Wait for generation to finish** before editing—changes during generation may not stick.
+- Not satisfied? Click **"🔄 Regenerate"**. Previous version isn't saved—**copy any parts you like first**.
+- The right panel "📋 Writing Context" shows data AI auto-references—you don't need to touch it.
+
+### Step 4: Finalize
+
+Satisfied? Click **"📌 Finalize"** → saves as an official chapter.
+
+> ⚠️ If this chapter was already finalized, clicking again shows a confirmation dialog to prevent overwrites.
+
+### Right Panel
+
+| Panel | What It Is |
+|-------|-----------|
+| 📦 **SKILLs** | Writing rules you set for AI. Example: "Character actions need deep logic while retaining animal impulses, but not abrupt—make it feel natural." Create new or import from files, save and enable, can delete |
+| 📋 **Writing Context** | Auto-generated World Tree + Characters + Rhythm data. AI references this automatically |
+| 📖 **Behavior Patterns** | Preset psychology principles (loss aversion, trust games, etc.) for realistic character actions |
+
+---
+
+## Review Room — When You're Unsatisfied After Finalization
+
+**When to use:** You've finalized a chapter but feel something's off.
+
+### How to use
+
+1. Sidebar → 🔍 Review Room
+2. Select the chapter to review
+3. Click review (wait for AI analysis)
+4. Review suggestions appear on the right
+5. **Read suggestions** → decide what to change
+6. **Edit** → make changes in the review editor
+
+### ⚠️ Important
+
+- **Don't edit before analysis completes.** Unanalyzed edits may not take effect.
+- The "Apply" button on suggestion cards **may have bugs**—manually edit based on suggestions.
+- Remember to save after editing.
+
+### How Scoring Works
+
+Three AI reviewers (Strict, Balanced, Lenient) score across 13 dimensions:
+
+| Score | Result |
+|-------|--------|
+| ≥75 | ✅ Pass |
+| 50-74 | 🔄 Revise recommended |
+| <50 | 👤 Manual review needed |
 
 ---
 
 ## Three "Analyze" Buttons
 
-| Where | What It Analyzes |
-|-------|-----------------|
-| Project Manager (🔍 Analyze) | ALL chapters → updates World Tree/Characters/Rhythm |
-| Writer Desk (🔍 Analyze Chapter) | Current chapter ONLY |
-| Character Pool (🔍 Analyze) | Specific character in-depth |
+| Where | Button | What It Analyzes | When to Use |
+|-------|--------|-----------------|-------------|
+| Project Manager | 🔍 **Analyze** | ALL chapters → updates World Tree/Characters/Rhythm | After import, after each chapter |
+| Writer Desk | 🔍 **Analyze Chapter** | Current chapter ONLY | Quick check after writing |
+| Character Pool | 🔍 **Analyze** | ALL characters in-depth (results may be same as previous) | When you want to refresh character data |
+
+> Writer Desk's "Analyze Chapter" only sees the current chapter—run a full "🔍 Analyze" in Project Manager for global context.
 
 ---
 
-## Review Room
+## Other Pages
 
-When you're unhappy after finalization: select chapter → review → wait for AI → read suggestions → edit in the review editor.
+| Page | What It Does |
+|------|-------------|
+| 🌳 **World Tree** | Story structure: main plot progress, subplot status, foreshadowing tracking |
+| 🧠 **Characters** | Personality, behavior patterns, relationships. Custom analysis prompts available |
+| 📊 **Rhythm Console** | Per-chapter engagement and emotional intensity data |
+| 📋 **History Log** | Real-time progress during analysis; full conversation logs after completion |
 
-> **Warning:** Don't edit before analysis completes. The "apply" button may have bugs — manually edit based on suggestions.
+All three pages have **version selectors** at the top—each analysis creates a new version (v1/v2/v3). Different models produce different results, so you can switch and compare.
 
 ---
 
-## LLM Tips
+## LLM Choices
 
-- **Best:** Use DeepSeek API for everything. Cheap (~$0.50/novel), excellent quality.
-- **Budget (with GPU):** API for writing, local model for analysis/review.
-- **Local models are SLOWER** for analysis. If too slow, switch back to API.
+### Best: Use DeepSeek API for Everything
+
+- Cheap: **~$0.50 per novel**
+- Quality: Cloud models far outperform local ones
+- Easy: Sign up → copy key → paste → done
+
+### Budget Option (with GPU)
+
+Assign different LLMs per task in Settings:
+
+| Task | Suggested |
+|------|----------|
+| ✍️ Writing | DeepSeek API (quality) |
+| 🔍 Analysis / Review / Vote | Local model (free) |
+
+> **Note:** Local models are SLOWER for analysis and review. If it's too slow or quality is poor, switch everything back to API.
+
+### Slot vs Stateless
+
+- **⚡ Slot (recommended):** AI remembers previous content—repeated content isn't re-billed. Supported by DeepSeek and local models.
+- **🔵 Stateless:** Re-sends everything each time. Best compatibility, uses more Tokens.
+
+**Unsure? Pick Stateless.**
+
+---
+
+## Important Tips
+
+- **Finalize protection:** Already-finalized chapters show a confirmation dialog to prevent overwrites
+- **Data safety:** All data stored in `projects/` folder. Crash? Just refresh—nothing lost. Backup: copy that folder
+- **Page switching:** Content auto-saves to disk, won't be lost
+- **Internet:** API mode needs internet. Local LLM can work offline
+
+---
+
+## Local LLM Deployment (Brief)
+
+For users with a 12GB+ NVIDIA GPU who want to save money. **Most people don't need this—just use DeepSeek API.**
+
+**What you need:** 12GB+ GPU + 32GB RAM. Recommended model: Qwen3.6-35B-A3B (MoE, ~5.5GB VRAM).
+
+**Rough steps:** Download llama.cpp → download GGUF model → write a startup script → add `http://127.0.0.1:8080` in Settings.
+
+Once set up: assign analysis/review to local LLM (free), keep writing on API (quality).
 
 ---
 
