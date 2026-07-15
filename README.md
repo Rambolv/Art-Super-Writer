@@ -303,14 +303,18 @@ pause
 
 | 参数 | 干嘛的 |
 |------|--------|
-| `-ngl 99` | 全部层放显卡上跑 |
-| `--flash-attn on` | 闪存注意力——省显存、提速 |
-| `--jinja` | 提示词模板引擎——让 AI 更懂你要什么 |
-| `--reasoning off` | 关掉推理链——写小说不需要，开着浪费算力 |
-| `-c 131072` | 上下文窗口 128K（4090 可以开到 260000） |
-| `--cache-type-k q4_0` | **KV 缓存量化——这个最关键。不量化 128K 上下文就能吃掉十几 G 显存，量化后大幅省显存** |
-| `--cache-type-v q4_0` | 同上 |
-| `--mlock` | 锁定内存——防止 Windows 把模型换到硬盘 |
+| `-m` | 模型文件路径。下载的 `.gguf` 文件放哪就写哪 |
+| `-ngl 99` | 放到 GPU 的层数。99 = 全部放 GPU。显存不够就改小，比如 20 |
+| `--flash-attn on` | Flash Attention——用分块计算替代全局注意力矩阵，O(n) 内存替代 O(n²)，省显存且加速 |
+| `--jinja` | 启用 Jinja 模板引擎。让聊天模板支持 function calling 和结构化输出，提示词格式化更精确 |
+| `--reasoning off` | 禁用推理模式。Reasoning 会让模型在输出前先内部推理（生成隐藏的思考 Token），占上下文且写小说不需要 |
+| `-c 131072` | 上下文窗口大小（Token 数）。131072 = 128K，大约能装 20~30 万字。4090 24G 可开到 260000 |
+| `-t 12` | CPU 推理线程数。设为物理核心数，12 核就写 12 |
+| `-b 1024` | 批处理大小——一次并行处理多少 Token。越大越快但越吃内存，1024 是平衡值 |
+| `-ub 512` | 微批大小——把 batch 再切分。帮助内存管理，设为 batch 的一半 |
+| `--cache-type-k q4_0` | **KV 缓存 Key 量化到 4-bit。这是最核心的显存优化——128K 上下文的 KV 缓存原本约 12~16GB，量化到 Q4_0 后控制在 3~4GB** |
+| `--cache-type-v q4_0` | KV 缓存 Value 量化，同上 |
+| `--mlock` | 调用 mlock() 系统调用，物理锁死已分配内存，禁止 OS swap 到虚拟内存/硬盘——保证推理速度不因内存换页骤降 |
 
 4. 在软件设置里：供应商选自托管，地址 `http://127.0.0.1:8080`，模式选 ⚡ Slot
 
@@ -613,7 +617,16 @@ bin\llama-server.exe ^
   --port 8080
 ```
 
-**Key params:** `--flash-attn on` saves VRAM. `--cache-type-k/v q4_0` quantizes KV cache—**critical for fitting 128K context in limited VRAM**. `--mlock` prevents OS from swapping model to disk. With RTX 4090, increase `-c 260000`.
+**Key params:**
+- `-ngl 99` — offload all layers to GPU (reduce if VRAM-constrained)
+- `--flash-attn on` — Flash Attention: reduces memory from O(n²) to O(n), saves VRAM and speeds inference
+- `--jinja` — Jinja templating engine: enables proper chat template formatting with function calling support
+- `--reasoning off` — disables Chain-of-Thought (hidden reasoning tokens that waste context for creative writing)
+- `--cache-type-k q4_0` / `--cache-type-v q4_0` — **KV cache 4-bit quantization. Critical: reduces 128K context cache from ~12-16GB to ~3-4GB**
+- `-t 12` — CPU threads for inference (match physical core count)
+- `-b 1024` / `-ub 512` — batch and micro-batch sizes for parallel token processing
+- `--mlock` — mlock() physical memory lock, prevents OS swap to disk
+- With RTX 4090 24GB, increase `-c 260000`.
 
 4. In app: provider = Self-hosted, URL = `http://127.0.0.1:8080`, mode = ⚡ Slot.
 
