@@ -75,7 +75,8 @@
 | 🌳 **世界树** | 展示故事结构：主线节点、支线进度、伏笔排序、世界观设定 |
 | 🧠 **角色池** | 展示角色性格、行为模式、关系网、一致性警告。可做深度分析 |
 | 📊 **节奏控制台** | 展示每章吸引力、情感浓度、连续性健康数据 |
-| 🔍 **审查室** | S1 机械闸 + S2 三审官（13 维度评分）+ 夹逼投票 + 质量门禁 |
+| 🔍 **审查室** | S1 机械闸 + S2 三审官（13 维度评分）+ 夹逼投票 + 质量门禁 + 已定稿章节解锁编辑 + 自适应自动保存 + 草稿版本管理 |
+| 🛠️ **进程管理** | 独立 EXE 工具，一键关闭后台服务器和本地 LLM 进程（WebUI 关闭后服务仍在后台运行时使用） |
 | 🤖 **全自动写作** | 全自动长篇写作（付费功能） |
 | 📋 **历史日志** | 分析进行中看实时进度、分析完回看完整对话记录 |
 | ⚙️ **设置** | 管理 LLM 配置、分角色指定不同 LLM、质量门禁阈值、13 维度权重 |
@@ -96,7 +97,7 @@
 
 **新手选这个（什么都不用装）：**
 
-1. 下载 `Art-Super-Writer-Portable.zip` → [点此下载](https://github.com/Rambolv/Art-Super-Writer/releases/download/v1.0/Art-Super-Writer-Portable.7z)
+1. 下载 `Art-Super-Writer-Portable.zip` → [点此下载](https://github.com/Rambolv/Art-Super-Writer/releases/download/v1.1/Art-Super-Writer-Portable.7z)
 2. 解压到任意文件夹
 3. 双击 **`超逸写手启动器.exe`**
 4. 浏览器自动打开 http://127.0.0.1:8899 → ✅ 完成
@@ -252,11 +253,16 @@ AI 生成的内容会显示在 **「📝 生成结果」** 框里。
 5. **看意见** → 决定怎么改
 6. **改文章** → 在审查室的编辑框里改
 
+### v1.1 新增功能
+
+- **解锁已定稿章节**：已定稿章节默认只读。点击右侧「🔓 解锁已定稿章节」即可编辑，修改后点击「📝 修改后再次定稿」。
+- **自适应自动保存**：解锁后自动启用。基于输入频率动态调整保存间隔（5s~30s），120 秒无输入暂停，失焦/切页/关闭前自动保存。每 5 分钟额外生成时间戳归档备份。
+- **草稿版本管理**：中心面板新增版本下拉框，可随时切换回任意历史草稿或正式章节。文件命名改为时间戳格式（`第001章_draft_5min_20260716_120000.md`），不再覆盖旧版。
+
 ### ⚠️ 重要提醒
 
 - **没分析之前不要改。** 在审查室的编辑框里乱改可能不生效。
 - 右边分析意见卡片上有个「应用」按钮……**点它可能有 Bug**。建议你照着意见自己手动改。
-- 改完了记得保存。
 
 ### 审查是怎么评的
 
@@ -481,7 +487,7 @@ DeepSeek、OpenAI 兼容接口、本地 llama.cpp。任何兼容 OpenAI Chat Com
 
 ### 1. Open the App
 
-**Recommended (no install):** Download `Art-Super-Writer-Portable.zip` → [Download here](https://github.com/Rambolv/Art-Super-Writer/releases/download/v1.0/Art-Super-Writer-Portable.7z) → Extract → Double-click `超逸写手启动器.exe` → browser opens at http://127.0.0.1:8899.
+**Recommended (no install):** Download `Art-Super-Writer-Portable.zip` → [Download here](https://github.com/Rambolv/Art-Super-Writer/releases/download/v1.1/Art-Super-Writer-Portable.7z) → Extract → Double-click `超逸写手启动器.exe` → browser opens at http://127.0.0.1:8899.
 
 > From source: `cd standalone` → `.venv\Scripts\activate` → `pip install flask requests` → Double-click launcher.
 
@@ -534,7 +540,8 @@ Art Super Writer automates what you'd otherwise do manually.
 | 🌳 **World Tree** | Story structure: main plot, subplots, foreshadowing, world-building |
 | 🧠 **Characters** | Personality tags, behavior models, relationships, consistency warnings. Deep analysis available |
 | 📊 **Rhythm Console** | Per-chapter engagement, emotional intensity, continuity health |
-| 🔍 **Review Room** | S1 mechanical scan + S2 three reviewers (13 dims) + squeeze vote + quality gate |
+| 🔍 **Review Room** | S1 mechanical scan + S2 three reviewers (13 dims) + squeeze vote + quality gate + unlock finalized chapters + adaptive auto-save + draft version management |
+| 🛠️ **Process Manager** | Standalone EXE tool — one-click kill backend server and local LLM processes (use when services keep running after WebUI closes) |
 | 🤖 **Auto Writer** | Full-auto long novel writing (paid feature) |
 | 📋 **History Log** | Real-time progress during analysis, full conversation logs after |
 | ⚙️ **Settings** | Manage LLM configs, assign different LLMs per role, quality gate thresholds, 13-dimension weights |
@@ -679,11 +686,16 @@ Satisfied? Click **"📌 Finalize"** → saves as an official chapter.
 5. **Read suggestions** → decide what to change
 6. **Edit** → make changes in the review editor
 
+### v1.1 New Features
+
+- **Unlock finalized chapters**: Finalized chapters are read-only by default. Click "🔓 Unlock" on the right panel to edit, then "📝 Re-finalize" after changes.
+- **Adaptive auto-save**: Enabled automatically after unlock. Adjusts interval dynamically (5s~30s) based on typing speed, pauses after 120s idle, saves on blur/page switch/close. 5-minute timestamped backups.
+- **Draft version management**: New dropdown in the center panel to switch between any historical draft or the finalized chapter. Files use timestamp naming (`ch001_draft_5min_20260716_120000.md`), old versions preserved.
+
 ### ⚠️ Important
 
 - **Don't edit before analysis completes.** Unanalyzed edits may not take effect.
 - The "Apply" button on suggestion cards **may have bugs**—manually edit based on suggestions.
-- Remember to save after editing.
 
 ### How Scoring Works
 
