@@ -96,7 +96,7 @@
 
 **新手选这个（什么都不用装）：**
 
-1. 下载 `Art-Super-Writer-Portable.zip` → [点此下载](https://github.com/Rambolv/Art-Super-Writer/releases/download/v1.0/Art-Super-Writer-Portable.7z)
+1. 下载 `Art-Super-Writer-Portable.zip` → [点此下载](https://github.com/Rambolv/Art-Super-Writer/raw/main/Art-Super-Writer-Portable.7z)
 2. 解压到任意文件夹
 3. 双击 **`超逸写手启动器.exe`**
 4. 浏览器自动打开 http://127.0.0.1:8899 → ✅ 完成
@@ -481,7 +481,7 @@ DeepSeek、OpenAI 兼容接口、本地 llama.cpp。任何兼容 OpenAI Chat Com
 
 ### 1. Open the App
 
-**Recommended (no install):** Download `Art-Super-Writer-Portable.zip` → [Download here](https://github.com/Rambolv/Art-Super-Writer/releases/download/v1.0/Art-Super-Writer-Portable.7z) → Extract → Double-click `超逸写手启动器.exe` → browser opens at http://127.0.0.1:8899.
+**Recommended (no install):** Download `Art-Super-Writer-Portable.zip` → [Download here](https://github.com/Rambolv/Art-Super-Writer/raw/main/Art-Super-Writer-Portable.7z) → Extract → Double-click `超逸写手启动器.exe` → browser opens at http://127.0.0.1:8899.
 
 > From source: `cd standalone` → `.venv\Scripts\activate` → `pip install flask requests` → Double-click launcher.
 
