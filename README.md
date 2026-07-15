@@ -66,7 +66,7 @@
 | 步骤 | 操作 |
 |------|------|
 | ① | 供应商选 **DeepSeek** |
-| ② | 模型填 **deepseek-chat** |
+| ② | 模型填 **deepseek-v4-flash** |
 | ③ | 粘贴你的 API Key（去 [platform.deepseek.com](https://platform.deepseek.com) 注册→API Keys→创建→复制 `sk-...`） |
 | ④ | 工作模式选 **⚡ Slot** |
 | ⑤ | 点保存 |
@@ -359,7 +359,7 @@ DeepSeek、OpenAI 兼容接口、本地 llama.cpp。任何兼容 OpenAI Chat Com
 
 ### 2. Connect AI (Required)
 
-Sidebar → ⚙️ Settings → Add LLM → Provider: **DeepSeek** → Model: `deepseek-chat` → paste API Key (get it from [platform.deepseek.com](https://platform.deepseek.com)) → Mode: **⚡ Slot** → Save → Test.
+Sidebar → ⚙️ Settings → Add LLM → Provider: **DeepSeek** → Model: `deepseek-v4-flash` → paste API Key (get it from [platform.deepseek.com](https://platform.deepseek.com)) → Mode: **⚡ Slot** → Save → Test.
 
 > **Why Slot?** Caches your content server-side. Same content isn't re-billed.
 
