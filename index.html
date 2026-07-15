@@ -4,6 +4,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>超逸写手 — Art Super Writer</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
 /* ═══════ 全局 ═══════ */
 *{margin:0;padding:0;box-sizing:border-box}
@@ -9804,7 +9806,11 @@ G !#	     道自己这么做是对不起周东华的，但她无法克制想
   </div><div class="card"><div class="card-title">📦 前置SKILL</div>
     <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">编写写作技巧，勾选=发送给LLM时激活</div>
     <div id="writerSkillList" style="font-size:12px;color:var(--text-dim);line-height:1.6;max-height:200px;overflow-y:auto;margin-bottom:6px"><span style="color:var(--text-muted)">暂无SKILL，点击下方按钮新建</span></div>
-    <button class="btn btn-sm btn-secondary" style="width:100%;font-size:11px" onclick="showSkillEditor('修罗都市')">✏️ 新建SKILL</button>
+    <div style="display:flex;gap:4px">
+      <button class="btn btn-sm btn-secondary" style="flex:1;font-size:11px" onclick="showSkillEditor('修罗都市')">✏️ 新建</button>
+      <button class="btn btn-sm btn-secondary" style="flex:1;font-size:11px" onclick="importSkill('修罗都市')">📥 导入</button>
+    </div>
+    <input type="file" id="skillImportInput" accept=".txt,.md,.docx,.xlsx,.json" style="display:none" onchange="handleSkillImport('修罗都市',event)">
   </div><div class="card"><div class="card-title">📋 故事快照</div>
       <div style="font-size:11px;color:var(--text-dim);line-height:1.6"></div></div><div class="card"><details><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--cyan)">📖 人类行为规律参考</summary>
     <div style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-top:6px;max-height:350px;overflow-y:auto">人类行为的关键规律——写作时让角色的行为真实可信：<br><br>【决策规律】<br>• 失去的痛苦≈得到的快乐的两倍。角色面对"确定损失"时会冒极大胆的风险去避免它<br>• 角色对已经投入的（时间/感情/金钱）难以割舍——即使继续投入已无意义<br>• 人做决定时不是在算绝对值，而是在和"参照点"比。同一个结果，对有的人是赚、对有的人是亏<br>• 面对收益时保守（见好就收），面对损失时冒险（赌一把翻盘）<br>• 人对"现在"的估值远高于"未来"。立flag容易，执行flag难<br>• 角色最在意的不是"得到什么"，而是"和身边的人比是多了还是少了"<br><br>【互动规律】<br>• 一次性相遇容易背叛（因为没有后果），长期关系容易合作（因为还要见面）<br>• 信任一旦被打破，需要10次合作才能修复1次背叛<br>• 合作的高风险需要信任机制：共同敌人、第三方担保、或长期的交情<br>• 双方都在赌对方先让步时，最危险——需要有非理性承诺的一方才会破局<br>• 人宁可得不到好处也要惩罚不公平的对待。这不是冲动，是人性深处的公平需求<br>• 人在社交场合和交易场合的行为逻辑完全不同——混用会出问题<br><br>【行为真实感规律】<br>• 任何出人意料的角色行为都需要：充分的动机 + 渐进的铺垫 + 匹配的代价<br>• 越反常的行为，需要的代价越大。一个好人撒个小谎不需要代价，一个忠臣叛国需要毁灭性的代价<br>• 反常行为的频率越低，单次反常的可信度越高<br>• 反常的是行为而不是价值观——底层价值观一致时，行为再反常也能被理解<br>• 角色做了反常的事之后，要有"事后反应"——愧疚、合理化、恐惧或解脱。没有后果的反常就是硬伤<br>• 角色的成长弧需要：旧信念→事件冲击→反思→新认知→新行为。跳过任何一步都会显得生硬</div>
@@ -15899,7 +15905,11 @@ renderers.writer = function(){
     <div id="writerSkillList" style="font-size:12px;color:var(--text-dim);line-height:1.6;max-height:200px;overflow-y:auto;margin-bottom:6px">
       <span style="color:var(--text-muted)">加载中...</span>
     </div>
-    <button class="btn btn-sm btn-secondary" style="width:100%;font-size:11px" onclick="showSkillEditor('${locked.name}')">✏️ 新建SKILL</button>
+    <div style="display:flex;gap:4px">
+      <button class="btn btn-sm btn-secondary" style="flex:1;font-size:11px" onclick="showSkillEditor('${locked.name}')">✏️ 新建</button>
+      <button class="btn btn-sm btn-secondary" style="flex:1;font-size:11px" onclick="importSkill('${locked.name}')">📥 导入</button>
+    </div>
+    <input type="file" id="skillImportInput" accept=".txt,.md,.docx,.xlsx,.json" style="display:none" onchange="handleSkillImport('${locked.name}',event)">
   </div>`;
 
   // 写作上下文面板
@@ -16324,6 +16334,86 @@ async function toggleSkillActive(projectName, filename, active){
     await saveFileToDisk(projectName, 'skills/external', filename, JSON.stringify(skill, null, 2));
     toast(active ? `✅ 已激活「${skill.title}」` : `⏸️ 已停用「${skill.title}」`);
   } catch(e){ toast('❌ 操作失败','error'); }
+}
+
+// ═══════ 导入SKILL ═══════
+let _importFileInput = null;
+
+/** 打开文件选择器 */
+function importSkill(projectName){
+  let input = document.getElementById('skillImportInput');
+  if(!input){
+    input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.md,.docx,.xlsx,.json';
+    input.id = 'skillImportInput';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+  }
+  input.value = ''; // 清空，保证同文件可重复选
+  input.onchange = (e) => handleSkillImport(projectName, e);
+  input.click();
+}
+
+/** 处理导入文件 */
+async function handleSkillImport(projectName, event){
+  const file = event.target.files?.[0];
+  if(!file) return;
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  const baseName = file.name.replace(/\.[^.]+$/, '');
+  let content = '';
+  let title = baseName;
+
+  try {
+    if(ext === 'json'){
+      // JSON：尝试解析已有SKILL格式，否则全文作为内容
+      const text = await file.text();
+      try {
+        const parsed = JSON.parse(text);
+        if(parsed.title) title = parsed.title;
+        content = parsed.content || parsed.content_text || text;
+      } catch(e){ content = text; }
+    } else if(ext === 'docx'){
+      // Word：用 mammoth.js 提取文本
+      if(typeof mammoth === 'undefined'){
+        toast('❌ mammoth.js 未加载，请刷新页面重试','error'); return;
+      }
+      const result = await mammoth.extractRawText({arrayBuffer: await file.arrayBuffer()});
+      content = result.value;
+      if(!content.trim()){ toast('❌ 文档内容为空','error'); return; }
+    } else if(ext === 'xlsx'){
+      // Excel：用 SheetJS 提取所有表格为文本
+      if(typeof XLSX === 'undefined'){
+        toast('❌ SheetJS 未加载，请刷新页面重试','error'); return;
+      }
+      const data = new Uint8Array(await file.arrayBuffer());
+      const workbook = XLSX.read(data, {type: 'array'});
+      const sheets = workbook.SheetNames.map(name => {
+        const csv = XLSX.utils.sheet_to_csv(workbook.Sheets[name]);
+        return `【${name}】\n${csv}`;
+      });
+      content = sheets.join('\n\n');
+      if(!content.trim()){ toast('❌ 表格内容为空','error'); return; }
+    } else {
+      // txt / md：直接读文本
+      content = await file.text();
+    }
+
+    if(!content.trim()){ toast('❌ 文件内容为空','error'); return; }
+
+    // 保存为SKILL
+    const safeName = 'skill_'+title.replace(/[\\\/:*?"<>|]/g,'_').substring(0,40)+'.json';
+    const skillData = JSON.stringify({title, content: content.trim(), active: true}, null, 2);
+    await saveFileToDisk(projectName, 'skills/external', safeName, skillData);
+
+    toast(`✅ 已导入「${title}」`);
+    // 刷新SKILL列表
+    const listEl = document.getElementById('writerSkillList');
+    if(listEl) renderers.writer();
+  } catch(e){
+    toast('❌ 导入失败: '+e.message,'error');
+  }
 }
 
 // 删除SKILL（二次确认）
