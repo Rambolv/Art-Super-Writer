@@ -181,6 +181,8 @@ html,body{height:100%;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',san
     <button class="nav-btn" data-page="tension"><span class="icon">📊</span> 节奏控制台</button>
     <button class="nav-btn" data-page="settings"><span class="icon">⚙️</span> 设置</button>
     <button class="nav-btn" data-page="history"><span class="icon">📋</span> 历史日志</button>
+    <div class="nav-divider"></div>
+    <button class="nav-btn" data-page="auto-writer"><span class="icon">🤖</span> 全自动长篇写作</button>
   </div>
 
   <!-- 中间 + 右侧面板 -->
@@ -9693,15 +9695,17 @@ G !#	     道自己这么做是对不起周东华的，但她无法克制想
     </details>
   </div>
   <div id="writerResult" style="display:none">
-    <div class="card">
+    <div class="card" data-source="static-fallback" style="border-left:3px solid rgba(180,130,255,.25)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-weight:600">📝 生成结果</span>
+        <span style="font-weight:600">📝 生成结果 <span style="font-size:10px;color:rgba(180,130,255,.5);font-weight:400">·静态·</span></span>
+        <span style="font-size:12px;color:var(--text-muted);margin:0 8px">用于新章输出，旧章内容不在本框显示</span>
         <div style="display:flex;gap:6px">
           <button class="btn btn-sm" id="btnRegenerate">🔄 重新生成</button>
           <button class="btn btn-success btn-sm" id="btnFinalize">📌 定稿</button>
           <button class="btn btn-primary btn-sm" id="btnSaveChapter">🔍 分析本章</button>
         </div>
       </div>
+      <div style="font-size:14px;color:var(--orange);margin-bottom:6px;text-align:center;font-weight:600">⏳ 请等待生成结果全部完成后再编辑文本</div>
       <textarea id="writerContent" rows="15" style="width:100%;resize:vertical;font-size:13px;line-height:1.7;font-family:inherit;background:var(--bg2);color:var(--text-dim)"></textarea>
     </div>
   </div></div>
@@ -9726,6 +9730,17 @@ G !#	     道自己这么做是对不起周东华的，但她无法克制想
     <div style="font-size:13px;color:var(--text-dim)">分析完成后数据将自动更新，请稍候</div>
   </div></div>
       <div id="page-settings" class="page"></div>
+      <div id="page-auto-writer" class="page">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 160px);text-align:center;padding:40px">
+      <div style="font-size:80px;margin-bottom:24px">🤖</div>
+      <div style="font-size:28px;font-weight:700;color:var(--accent);margin-bottom:16px">已 AI 欠费中，暂停开发</div>
+      <div style="font-size:16px;color:var(--text-dim);margin-bottom:32px">打赏可推进开发进度 🙏</div>
+      <div style="background:var(--bg2);border:2px dashed var(--border);border-radius:12px;padding:24px">
+        <img src="alipay_qr.png" alt="支付宝收款码" style="width:240px;height:240px;display:block" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+        <div style="display:none;color:var(--text-muted);font-size:13px;padding:60px 0">请将支付宝收款码保存为 alipay_qr.png</div>
+      </div>
+      <div style="margin-top:24px;font-size:13px;color:var(--text-muted)">感谢您的支持！每一份打赏都是前行的动力 ✨</div>
+    </div></div>
       <div id="page-history" class="page"><div class="page-title">📋 历史日志</div><div class="card"><div class="card-title">🔍 分析过程日志</div>
       <div style="max-height:60vh;overflow-y:auto">
       <div style="font-size:11px;color:var(--cyan);padding:4px 0;border-bottom:1px solid var(--border)}">🟢 当前会话 2026/7/13 12:10:23</div><div class="history-entry">
@@ -9799,6 +9814,7 @@ G !#	     道自己这么做是对不起周东华的，但她无法克制想
       <div id="page-characters-side" class="page"></div>
       <div id="page-tension-side" class="page"></div>
       <div id="page-settings-side" class="page"></div>
+      <div id="page-auto-writer-side" class="page"></div>
       <div id="page-history-side" class="page"><div class="card"><div class="card-title">📖 修罗都市</div>
     <div style="font-size:12px;color:var(--text-dim);line-height:1.8">
       <div>🔍 分析日志: 4条</div>
@@ -9831,6 +9847,7 @@ const L = {
   'tension':'📊 节奏控制台','tension.en':'📊 Rhythm',
   'settings':'⚙️ 设置','settings.en':'⚙️ Settings',
   'history':'📋 历史日志','history.en':'📋 History',
+  'auto-writer':'🤖 全自动长篇写作','auto-writer.en':'🤖 Auto Writer',
   'welcome':'欢迎使用 Art Super Writer','welcome.en':'Welcome to Art Super Writer',
   'welcome_desc':'请从左侧选择一个功能开始','welcome_desc.en':'Select a tool from the left to start',
   'no_data':'暂无数据','no_data.en':'No data',
@@ -11120,16 +11137,28 @@ async function saveFileToDisk(project, subfolder, filename, content){
   }).catch(()=>{});
 }
 
-/** 尝试加载指定章节的已保存方向文本（同时兼容 writer_direction 和 writer_prompt 两种文件名） */
+/** 尝试加载指定章节的已保存方向文本 */
 async function loadDirectionForChapter(projectName, chNum){
   const padded = String(chNum).padStart(3,'0');
-  // 优先新文件名 writer_direction，回退旧文件名 writer_prompt
-  const names = ['writer_direction_第'+padded+'章.json', 'writer_prompt_第'+padded+'章.json'];
-  for(const fname of names){
-    const saved = await readFileFromDiskLatest(projectName, 'projectLog', fname);
-    if(saved){
+  // 从 chapters/ 目录加载（与章节文件放在一起）
+  const fname = 'writer_direction_第'+padded+'章.json';
+  const saved = await readFileFromDisk(projectName, 'chapters', fname);
+  if(saved){
+    try {
+      const data = JSON.parse(saved);
+      if(data.direction){
+        document.getElementById('writerDirection').value = data.direction;
+        return;
+      }
+    } catch(e){}
+  }
+  // 回退：从旧位置 projectLog 加载
+  const oldNames = ['writer_direction_第'+padded+'章.json', 'writer_prompt_第'+padded+'章.json'];
+  for(const ofname of oldNames){
+    const oldSaved = await readFileFromDiskLatest(projectName, 'projectLog', ofname);
+    if(oldSaved){
       try {
-        const data = JSON.parse(saved);
+        const data = JSON.parse(oldSaved);
         if(data.direction){
           document.getElementById('writerDirection').value = data.direction;
           return;
@@ -11185,7 +11214,8 @@ function saveFileToDiskV(project, subfolder, filename, content, version){
 /** 从版本化文件夹读取最新版本的文件，无版本时回退到 subfolder/filename */
 async function readFileFromDiskLatest(projectName, subfolder, filename){
   const p = DB.projects[projectName];
-  const maxV = p?.analysisCount || 0;
+  // ★ 修复：至少搜索到 v1（因为 analysisCount=0 时保存会用 0||1=1）
+  const maxV = Math.max(p?.analysisCount || 0, 1);
   // 从高到低尝试版本文件夹
   for(let v = maxV; v >= 1; v--){
     const content = await readFileFromDisk(projectName, subfolder + '/v' + v, filename);
@@ -15840,12 +15870,14 @@ renderers.writer = function(){
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-weight:600">📝 生成结果</span>
+        <span style="font-size:12px;color:var(--text-muted);margin:0 8px">用于新章输出，旧章内容不在本框显示</span>
         <div style="display:flex;gap:6px">
           <button class="btn btn-sm" id="btnRegenerate">🔄 重新生成</button>
           <button class="btn btn-success btn-sm" id="btnFinalize">📌 定稿</button>
           <button class="btn btn-primary btn-sm" id="btnSaveChapter">🔍 分析本章</button>
         </div>
       </div>
+      <div style="font-size:14px;color:var(--orange);margin-bottom:6px;text-align:center;font-weight:600">⏳ 请等待生成结果全部完成后再编辑文本</div>
       <textarea id="writerContent" rows="15" style="width:100%;resize:vertical;font-size:13px;line-height:1.7;font-family:inherit;background:var(--bg2);color:var(--text-dim)"></textarea>
     </div>
   </div>`;
@@ -15974,14 +16006,14 @@ renderers.writer = function(){
     if(!direction){ toast('写作方向为空','error'); return; }
     const chNum = parseInt(document.getElementById('writerChNum').value) || nextCh;
     logAnalysis('写作方向', `第${chNum}章写作方向`, direction);
-    // 保存到磁盘projectLog（用writer_direction前缀，不覆盖发送LLM的完整记录）
+    // 保存到 chapters/ 目录（与章节文件放在一起）
     const p = DB.projects[locked.name];
-    if(p && p.folders?.projectLog){
-      saveFileToDisk(locked.name, 'projectLog/v'+(p.analysisCount||1),
+    if(p && p.folders?.chapters){
+      saveFileToDisk(locked.name, 'chapters',
         'writer_direction_第'+String(chNum).padStart(3,'0')+'章.json',
         {chapter:chNum, direction, savedAt:new Date().toISOString()});
     }
-    toast('✅ 提示词已保存到日志');
+    toast('✅ 提示词已保存');
   });
 
   document.getElementById('btnWrite')?.addEventListener('click', async ()=>{
@@ -16012,17 +16044,21 @@ renderers.writer = function(){
       _writerSession = new LLMSession(profile);
     }
   } else {
-    // Stateless 模式：不使用 session
-    _writerSession = null;
+    // Stateless 模式：先关闭 Slot session 再丢弃引用
+    // ★ close() 仅清理 JS 端状态（isOpen/messages），llama.cpp 自动管理 slot 生命周期
+    // ★ close() 内部有 isOpen 守卫，重复调用安全；即使抛异常也不影响后续，引用仍会被置 null
+    if(_writerSession){ try { _writerSession.close(); } catch(e){} _writerSession = null; }
   }
 
   // 先显示结果区域，让流式内容实时可见
   document.getElementById('writerContent').value = '';
   document.getElementById('writerResult').style.display = 'block';
 
-  await writeChapter(locked.name, chNum, direction, temp, maxWords, profile, _writerSession);
-
+  try {
+    await writeChapter(locked.name, chNum, direction, temp, maxWords, profile, _writerSession);
+  } finally {
     btn.disabled = false; btn.textContent = '📤 发送给LLM';
+  }
   });
 
   document.getElementById('btnRegenerate')?.addEventListener('click', ()=>{
@@ -16042,6 +16078,13 @@ renderers.writer = function(){
     const p = DB.projects[locked.name];
     if(!p.chapters) p.chapters = [];
     const existing = p.chapters.findIndex(c=>c.number===chNum);
+    // ★ 检测是否覆盖已定稿章节，弹框确认
+    if(existing>=0 && p.chapters[existing]?.status==='approved'){
+      btn.disabled = false; btn.textContent = '📌 定稿';
+      const confirmMsg = `⚠️ 该章节(第${chNum}章)已经定稿，再次定稿会覆盖原有内容，请确认是否覆盖？`;
+      if(!confirm(confirmMsg)) return;
+      btn.disabled = true; btn.textContent = '⏳ 定稿中...';
+    }
     const chData = {number:chNum, content, status:'approved', title:'', created_at:new Date().toISOString()};
     if(existing>=0) p.chapters[existing] = {...p.chapters[existing], ...chData};
     else p.chapters.push(chData);
