@@ -138,6 +138,7 @@ html,body{height:100%;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',san
 .toast-error{background:var(--accent)}
 .toast-info{background:var(--cyan);color:var(--bg)}
 @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes pulse-border{0%{border-color:#ffc107}50%{border-color:#ff9800}100%{border-color:#ffc107}}
 
 /* 历史日志样式 */
 .history-entry{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;line-height:1.6}
@@ -10753,6 +10754,8 @@ let currentPage = 'creative';
 const PAGES = ['creative','project','writer','review','worldtree','characters','tension','settings','history'];
 
 function navigateTo(pageId){
+  if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  autoSaveDraft();
   // 切页时保存写作台未保存的内容
   savePendingWriterContent();
   // 切页时清理历史日志刷新定时器
@@ -14202,6 +14205,18 @@ async function _loadCharSideExtras(projName){
 // ═══════ 审查室页面 ═══════
 // 完整工作流：编辑器(左) + 建议卡片(右) + 保存到磁盘 + 版本历史
 let _reviewInProgress = false;
+let _reviewUnlocked = false;
+let _reviewAutoSaveEnabled = true;
+let _autoSaveTimer = null;
+let _autoSave5minTimer = null;
+let _autoSavePaused = false;
+let _idleTimer = null;
+let _inputTimestamps = [];
+let _lastSavedContent = '';
+const AUTO_SAVE_MIN = 5000;
+const AUTO_SAVE_MAX = 30000;
+const IDLE_TIMEOUT = 120000;
+const AUTO_SAVE_5MIN = 300000;
 // ★ 编辑器撤销/重做历史
 let _editorUndoStack = [];
 let _editorRedoStack = [];
@@ -14286,8 +14301,7 @@ renderers.review = function(){
       <option value="">📋 当前审查结果</option>
     </select>
     <button class="btn btn-primary btn-sm" id="btnStartReview" ${_reviewInProgress?'disabled':''}>${_reviewInProgress?'⏳ 审查中...':'🔍 审查'}</button>
-    <button class="btn btn-success btn-sm" onclick="saveReviewDraft(${savedChNum})">💾 保存草稿</button>
-    <button class="btn btn-success btn-sm" onclick="approveChapter(${savedChNum})" ${!currentCh||currentCh.status==='approved'?'disabled':''}>✅ 定稿</button>
+    <span style="font-size:11px;color:var(--text-dim);margin-left:6px">📄 第${savedChNum}章 · ${currentCh?.status==='approved'?'✅ 已定稿':'📝 未定稿'} · 🕐 ${currentCh?.created_at?new Date(currentCh.created_at).toLocaleString():'未知'}</span>
     ${lr&&lr.chapter===savedChNum&&lr.allSuggestions?.length?`<span style="font-size:10px;color:var(--cyan);background:rgba(0,212,255,.08);padding:2px 8px;border-radius:10px">💡 ${lr.allSuggestions.length}条建议</span>`:''}
   </div>
   <div id="reviewHistoryStatus" style="font-size:10px;color:var(--text-dim);margin-bottom:4px"></div>`;
@@ -14302,6 +14316,13 @@ renderers.review = function(){
   });
   html += `</div>`;
 
+  // ─── 章节状态 + 草稿版本选择 ───
+  html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+    <select id="reviewDraftSelect" style="font-size:10px;padding:2px 4px" onchange="loadSelectedDraft(${savedChNum})">
+      <option value="">📋 选择草稿版本...</option>
+    </select>
+  </div>`;
+
   // ─── 单栏：编辑器全宽（建议移到右侧可拖拽面板中） ───
   html += `<div style="height:calc(100vh - 340px);min-height:350px;display:flex;flex-direction:column">`;
 
@@ -14313,7 +14334,7 @@ renderers.review = function(){
         <button id="btnUndo" class="btn btn-sm btn-secondary" style="font-size:9px;padding:1px 8px;opacity:0.3" onclick="undoEditor()" title="撤销 Ctrl+Z">↩ 撤销</button>
         <button id="btnRedo" class="btn btn-sm btn-secondary" style="font-size:9px;padding:1px 8px;opacity:0.3" onclick="redoEditor()" title="重做 Ctrl+Y">↪ 前进</button>
       </div>
-      <textarea id="reviewEditor" style="flex:1;width:100%;resize:none;font-size:13px;line-height:1.7;font-family:inherit;min-height:200px;background:var(--bg2);color:var(--text-dim)">${chContent.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+      <textarea id="reviewEditor" style="flex:1;width:100%;resize:none;font-size:13px;line-height:1.7;font-family:inherit;min-height:200px;background:var(--bg2);color:var(--text-dim)" ${currentCh&&currentCh.status==='approved'&&!_reviewUnlocked?'readonly':''}>${chContent.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
     </div>`;
 
   // 左栏底部：三审评分 + 门禁
@@ -14550,10 +14571,25 @@ renderers.review = function(){
   <div class="card"><div class="card-title">⚡ 操作</div>
     <button class="btn btn-sm btn-secondary btn-block" style="margin-bottom:3px" onclick="onReviewChChange()">🔄 刷新编辑器</button>
     <button class="btn btn-sm btn-primary btn-block" style="margin-bottom:3px" onclick="saveReviewDraft(${savedChNum})">💾 保存草稿</button>
-    <button class="btn btn-sm btn-success btn-block" onclick="approveChapter(${savedChNum})" ${!currentCh||currentCh.status==='approved'?'disabled':''}>✅ 定稿此章</button>
+    ${(()=>{
+      if(currentCh && currentCh.status==='approved'){
+        if(_reviewUnlocked){
+          return `<button class="btn btn-sm btn-warning btn-block" onclick="approveChapter(${savedChNum})" style="animation:pulse-border 1s infinite">📝 修改后再次定稿</button>`;
+        } else {
+          return `<button class="btn btn-sm btn-secondary btn-block" onclick="unlockChapter(${savedChNum})">🔓 解锁已定稿章节</button>`;
+        }
+      } else {
+        return `<button class="btn btn-sm btn-success btn-block" onclick="approveChapter(${savedChNum})">✅ 定稿此章</button>`;
+      }
+    })()}
+    ${currentCh&&currentCh.status==='approved'&&_reviewUnlocked?`
+    <label style="display:flex;align-items:center;gap:4px;margin-top:6px;font-size:10px;color:var(--text-dim);cursor:pointer">
+      <input type="checkbox" ${_reviewAutoSaveEnabled?'checked':''} onchange="_reviewAutoSaveEnabled=this.checked" style="cursor:pointer"> 自动保存草稿
+    </label>
+    <div style="font-size:9px;color:var(--text-dim);margin-top:2px">自动保存草稿会增加硬盘读写</div>`:''}
   </div>`;
 
-  if(currentCh && currentCh.status==='approved'){
+  if(currentCh && currentCh.status==='approved' && !_reviewUnlocked){
     sideHtml += `<div class="card"><div style="font-size:11px;color:var(--green);text-align:center">✅ 此章已定稿</div></div>`;
   }
 
@@ -14571,10 +14607,167 @@ renderers.review = function(){
   }
 
   side.innerHTML = sideHtml;
+  populateDraftList(savedChNum);
+  if(_reviewUnlocked) setupReviewAutoSave();
 };
+
+// ─── 草稿版本下拉框 ───
+let _reviewDraftCache = [];
+async function populateDraftList(chNum){
+  const sel = document.getElementById('reviewDraftSelect');
+  if(!sel) return;
+  const locked = getLockedProject();
+  if(!locked) return;
+  const padded = String(chNum).padStart(3,'0');
+  let html = '<option value="">📋 选择版本...</option>';
+  // 优先加入已定稿章节
+  const chapter = await readFileFromDisk(locked.name, 'chapters', `chapter_${padded}.md`);
+  if(chapter) html += `<option value="__chapter__">✅ 正式章节</option>`;
+  // 加入草稿列表
+  const files = await listDiskFiles(locked.name, 'drafts');
+  _reviewDraftCache = [];
+  if(files && files.length){
+    const chDrafts = files.filter(f => f.startsWith(`第${padded}章_draft`) || f.startsWith(`revised_第${padded}章_`));
+    chDrafts.sort().reverse();
+    _reviewDraftCache = chDrafts;
+    html += chDrafts.map(f => {
+      const label = f.includes('_draft') ? '🔄 自动保存' : '💾 手动保存';
+      const m = f.match(/_(\d{8})_(\d{6})\.md$/);
+      const oldM = !m ? f.match(/_v(\d+)\.md$/) : null;
+      const dt = m ? m[1].slice(0,4)+'-'+m[1].slice(4,6)+'-'+m[1].slice(6,8)+' '+m[2].slice(0,2)+':'+m[2].slice(2,4)+':'+m[2].slice(4,6) : oldM ? '版本 '+oldM[1] : f;
+      return `<option value="${f}">${label} ${dt}</option>`;
+    }).join('');
+  }
+  if(!chapter && (!files || !files.length)) html = '<option value="">📋 暂无草稿</option>';
+  sel.innerHTML = html;
+}
+async function loadSelectedDraft(chNum){
+  const sel = document.getElementById('reviewDraftSelect');
+  if(!sel || !sel.value) return;
+  const locked = getLockedProject();
+  if(!locked) return;
+  const padded = String(chNum).padStart(3,'0');
+  let content;
+  if(sel.value === '__chapter__'){
+    content = await readFileFromDisk(locked.name, 'chapters', `chapter_${padded}.md`);
+  } else {
+    content = await readFileFromDisk(locked.name, 'drafts', sel.value);
+  }
+  if(content){
+    const editor = document.getElementById('reviewEditor');
+    if(editor) editor.value = content;
+    const p = DB.projects[locked.name];
+    if(p){
+      const ch = (p.chapters||[]).find(c=>c.number===chNum);
+      if(ch) ch.content = content;
+    }
+    toast(`✅ 已加载: ${sel.value === '__chapter__' ? '正式章节' : sel.value}`);
+  }
+}
+
+// ─── 自动保存 ───
+function autoSaveDraft(){
+  if(!_reviewAutoSaveEnabled || _autoSavePaused) return;
+  const editor = document.getElementById('reviewEditor');
+  if(!editor) return;
+  const content = editor.value;
+  if(!content || content === _lastSavedContent) return;
+  const locked = getLockedProject();
+  if(!locked) return;
+  const p = DB.projects[locked.name];
+  if(!p) return;
+  const sel = document.getElementById('reviewChSelect');
+  if(!sel) return;
+  const chNum = parseInt(sel.value);
+  if(!chNum) return;
+  // ★ 已定稿且未解锁 → 不保存
+  const ch = (p.chapters||[]).find(c=>c.number===chNum);
+  if(ch && ch.status==='approved' && !_reviewUnlocked) return;
+  const padded = String(chNum).padStart(3,'0');
+  saveFileToDisk(locked.name, 'drafts', `第${padded}章_draft.md`, content).then(()=>{
+    _lastSavedContent = content;
+    if(ch) ch.content = content;
+  });
+}
+function getAdaptiveDelay(){
+  const now = Date.now();
+  // 只取最近 10s 的输入记录
+  _inputTimestamps = _inputTimestamps.filter(t => now - t < 10000);
+  const count = _inputTimestamps.length;
+  // 0次=30s, 1-2次=20s, 3-5次=10s, 6+次=5s
+  if(count >= 6) return 5000;
+  if(count >= 3) return 10000;
+  if(count >= 1) return 20000;
+  return 30000;
+}
+function resetIdleTimer(){
+  if(_idleTimer) clearTimeout(_idleTimer);
+  if(_autoSavePaused) _autoSavePaused = false;
+  _idleTimer = setTimeout(()=>{ _autoSavePaused = true; }, IDLE_TIMEOUT);
+}
+function setupReviewAutoSave(){
+  const editor = document.getElementById('reviewEditor');
+  if(!editor) return;
+  const locked = getLockedProject();
+  if(locked){
+    const p = DB.projects[locked.name];
+    const sel = document.getElementById('reviewChSelect');
+    if(p && sel){
+      const chNum = parseInt(sel.value);
+      const ch = (p.chapters||[]).find(c=>c.number===chNum);
+      if(ch) _lastSavedContent = ch.content || '';
+    }
+  }
+  _inputTimestamps = [];
+  _autoSavePaused = false;
+  resetIdleTimer();
+  editor.addEventListener('input', ()=>{
+    _inputTimestamps.push(Date.now());
+    resetIdleTimer();
+    if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
+    _autoSaveTimer = setTimeout(autoSaveDraft, getAdaptiveDelay());
+  });
+  editor.addEventListener('blur', autoSaveDraft);
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden) autoSaveDraft();
+  });
+  // ★ 5分钟定时保存（带时间戳归档）
+  if(!_autoSave5minTimer){
+    _autoSave5minTimer = setInterval(()=>{
+      const e = document.getElementById('reviewEditor');
+      if(!e || !e.value || !_reviewAutoSaveEnabled || _autoSavePaused) return;
+      const locked2 = getLockedProject();
+      if(!locked2) return;
+      const p2 = DB.projects[locked2.name];
+      if(!p2) return;
+      const sel2 = document.getElementById('reviewChSelect');
+      if(!sel2) return;
+      const chNum2 = parseInt(sel2.value);
+      if(!chNum2) return;
+      const ch2 = (p2.chapters||[]).find(c=>c.number===chNum2);
+      if(ch2 && ch2.status==='approved' && !_reviewUnlocked) return;
+      if(e.value === _lastSavedContent) return;
+      const padded2 = String(chNum2).padStart(3,'0');
+      const now2 = new Date();
+      const ts2 = now2.getFullYear() + String(now2.getMonth()+1).padStart(2,'0') + String(now2.getDate()).padStart(2,'0') + '_' + String(now2.getHours()).padStart(2,'0') + String(now2.getMinutes()).padStart(2,'0') + String(now2.getSeconds()).padStart(2,'0');
+      saveFileToDisk(locked2.name, 'drafts', `第${padded2}章_draft_5min_${ts2}.md`, e.value);
+    }, AUTO_SAVE_5MIN);
+  }
+  window.addEventListener('beforeunload', ()=>{ autoSaveDraft(); });
+}
 
 // ─── 切换章节 ───
 function onReviewChChange(){
+  if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  autoSaveDraft();
+  _reviewUnlocked = false;
+  const editor = document.getElementById('reviewEditor');
+  if(editor){
+    editor.style.background = '';
+    editor.style.color = '';
+    editor.style.border = '';
+    editor.readOnly = false;
+  }
   const locked=getLockedProject(); if(!locked)return;
   const p=DB.projects[locked.name]; if(!p)return;
   const sel=document.getElementById('reviewChSelect');
@@ -14593,31 +14786,33 @@ function onReviewChChange(){
 // ─── 从磁盘读取章节最新内容到编辑器 ───
 async function loadReviewChapterContent(projectName, chNum){
   const p=DB.projects[projectName]; if(!p) return;
-  // 优先读取草稿（最新草稿）
   const padded = String(chNum).padStart(3,'0');
-  const rHist = p._reviewHistory||{};
-  const chHist = rHist[chNum]||{drafts:[],reviews:[]};
-  const draftCount = chHist.drafts.length;
-
-  if(draftCount>0){
-    // 从磁盘读取最新草稿
-    const content = await readFileFromDisk(projectName, 'drafts', `revised_第${padded}章_v${draftCount}.md`);
-    if(content){
-      const editor = document.getElementById('reviewEditor');
-      if(editor) editor.value = content;
-      // 同步到内存
-      const ch = (p.chapters||[]).find(c=>c.number===chNum);
-      if(ch) ch.content = content;
-      return;
-    }
-  }
-  // 回退到正式章节
-  const content = await readFileFromDisk(projectName, 'chapters', `chapter_${padded}.md`);
-  if(content){
+  // 优先加载已定稿章节
+  const chapter = await readFileFromDisk(projectName, 'chapters', `chapter_${padded}.md`);
+  if(chapter){
     const editor = document.getElementById('reviewEditor');
-    if(editor) editor.value = content;
+    if(editor) editor.value = chapter;
     const ch = (p.chapters||[]).find(c=>c.number===chNum);
-    if(ch) ch.content = content;
+    if(ch) ch.content = chapter;
+    _lastSavedContent = chapter;
+    return;
+  }
+  // 无定稿章节，查找最新草稿
+  const files = await listDiskFiles(projectName, 'drafts');
+  if(files && files.length){
+    const chDrafts = files.filter(f => f.startsWith(`第${padded}章_draft`) || f.startsWith(`revised_第${padded}章_`));
+    if(chDrafts.length){
+      chDrafts.sort().reverse();
+      const content = await readFileFromDisk(projectName, 'drafts', chDrafts[0]);
+      if(content){
+        const editor = document.getElementById('reviewEditor');
+        if(editor) editor.value = content;
+        const ch = (p.chapters||[]).find(c=>c.number===chNum);
+        if(ch) ch.content = content;
+        _lastSavedContent = content;
+        return;
+      }
+    }
   }
 }
 
@@ -14696,13 +14891,15 @@ async function saveReviewDraft(chNum){
 
   // 保存到磁盘
   const padded = String(chNum).padStart(3,'0');
+  const now = new Date();
+  const ts = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
   saveFileToDisk(locked.name, 'chapters', `chapter_${padded}.md`, content);
 
   // 同时也保存版本化草稿（不覆盖旧版本）
   if(!p._reviewHistory) p._reviewHistory = {};
   if(!p._reviewHistory[chNum]) p._reviewHistory[chNum] = {drafts:[],reviews:[]};
   const vNum = p._reviewHistory[chNum].drafts.length + 1;
-  saveFileToDisk(locked.name, 'drafts', `revised_第${padded}章_v${vNum}.md`, content);
+  saveFileToDisk(locked.name, 'drafts', `revised_第${padded}章_${ts}.md`, content);
 
   // 记录版本历史
   p._reviewHistory[chNum].drafts.push({
@@ -14717,14 +14914,34 @@ async function saveReviewDraft(chNum){
   renderers.review();
 }
 
+// ─── 解锁已定稿章节 ───
+function unlockChapter(chNum){
+  _reviewUnlocked = true;
+  renderers.review();
+  const editor = document.getElementById('reviewEditor');
+  if(editor){
+    editor.style.background = '#1e1e3a';
+    editor.style.color = 'var(--text)';
+    editor.style.border = '2px solid #ffc107';
+    editor.readOnly = false;
+  }
+}
+
 // ─── 定稿章节 ───
 async function approveChapter(chNum){
+  _reviewUnlocked = false;
+  const editor = document.getElementById('reviewEditor');
+  if(editor){
+    editor.style.background = '';
+    editor.style.color = '';
+    editor.style.border = '';
+    editor.readOnly = false;
+  }
   const locked=getLockedProject(); if(!locked){toast('请先锁定项目','error');return}
   const p=DB.projects[locked.name]; if(!p)return;
   const ch=(p.chapters||[]).find(c=>c.number===chNum); if(!ch){toast('章节不存在','error');return}
 
   // 获取编辑器最新内容
-  const editor=document.getElementById('reviewEditor');
   if(editor && editor.value.trim()) ch.content = editor.value;
 
   ch.status = 'approved';
