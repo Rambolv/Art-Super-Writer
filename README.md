@@ -275,24 +275,45 @@ pip install flask requests
 
 ## 七、省钱方案：本地跑模型（需要显卡）
 
-如果你有一块 8G 以上的 NVIDIA 显卡，可以不花 API 的钱。
+如果你有一块 12G 以上的 NVIDIA 显卡（和 32GB+ 内存），可以部署本地大模型。下面这套方案能让 12GB 显存的设备顺畅运行 350 亿参数的 MoE 大模型。
+
+### 这套方案的原理
+
+使用的模型是 **Qwen3.6-35B-A3B**——MoE（混合专家）架构：总参数 350 亿，但每次推理只激活 30 亿。这正是 MoE 的精妙之处——大模型的能力，小模型的推理代价。
+
+优化的核心思路只有一条：**用 CPU 的大内存换取 GPU 的显存空间。**
+
+- **注意力层（轻量）放 GPU**：99 层网络中的弹性注意力层参数占比小，量化后显存占用极低，放 GPU 上跑最快
+- **MoE 专家层（重量）放 CPU**：MoE 架构有一堆"专家"权重，必须完整存储但每次只用少数几个。通过参数 `--n-cpu-moe 999` 全部放在 CPU 内存里，GPU 只负责注意力计算——显存占用从 Q4 量化后的 ~20GB 直接降到 ~6GB 以内
+- **双重量化**：模型权重用 Q4_K_M 量化，上下文缓存也压缩到 4-bit。26 万 Token 上下文的 KV 缓存原本要 10GB+，量化后只需 2~3GB
+- **最终效果**：总显存占用约 5.5GB，推理速度 50~60 Token/秒——**12GB 显存的设备也能跑**
+
+### 硬件要求
+
+- NVIDIA 显卡，**12GB+ 显存**
+- CPU **8 物理核心以上**
+- **32GB+ DDR4 内存**（建议双通道或 DDR5）
+- CPU 支持 **AVX2 指令集**（近几年的 CPU 都支持）
 
 ### 步骤
 
 1. 从 [llama.cpp 下载页](https://github.com/ggerganov/llama.cpp/releases) 下载 Windows CUDA 版本，解压到 `LLM/bin/`
-2. 从 HuggingFace 或 ModelScope 下载 Qwen2.5-7B-Instruct 的 GGUF 格式模型，放到 `LLM/models/`
+2. 从 HuggingFace 或 ModelScope 下载 **Qwen3.6-35B-A3B GGUF 格式模型**（推荐 Q4_K_M 量化版本），放到 `LLM/models/`
 3. 在 `LLM/` 里创建 `start.bat`：
 
 ```bat
 @echo off
 bin\llama-server.exe ^
-  -m "models\你的模型.gguf" ^
+  -m "models\Qwen3.6-35B-A3B-Q4_K_M.gguf" ^
   -ngl 99 ^
+  --n-cpu-moe 999 ^
   --flash-attn on ^
   --jinja ^
   --reasoning off ^
   -c 131072 ^
   -t 12 ^
+  -b 1024 ^
+  -ub 512 ^
   --cache-type-k q4_0 ^
   --cache-type-v q4_0 ^
   --mlock ^
@@ -301,24 +322,30 @@ bin\llama-server.exe ^
 pause
 ```
 
-| 参数 | 干嘛的 |
-|------|--------|
-| `-m` | 模型文件路径。下载的 `.gguf` 文件放哪就写哪 |
-| `-ngl 99` | 放到 GPU 的层数。99 = 全部放 GPU。显存不够就改小，比如 20 |
-| `--flash-attn on` | Flash Attention——用分块计算替代全局注意力矩阵，O(n) 内存替代 O(n²)，省显存且加速 |
-| `--jinja` | 启用 Jinja 模板引擎。让聊天模板支持 function calling 和结构化输出，提示词格式化更精确 |
-| `--reasoning off` | 禁用推理模式。Reasoning 会让模型在输出前先内部推理（生成隐藏的思考 Token），占上下文且写小说不需要 |
-| `-c 131072` | 上下文窗口大小（Token 数）。131072 = 128K，大约能装 20~30 万字。4090 24G 可开到 260000 |
-| `-t 12` | CPU 推理线程数。设为物理核心数，12 核就写 12 |
-| `-b 1024` | 批处理大小——一次并行处理多少 Token。越大越快但越吃内存，1024 是平衡值 |
-| `-ub 512` | 微批大小——把 batch 再切分。帮助内存管理，设为 batch 的一半 |
-| `--cache-type-k q4_0` | **KV 缓存 Key 量化到 4-bit。这是最核心的显存优化——128K 上下文的 KV 缓存原本约 12~16GB，量化到 Q4_0 后控制在 3~4GB** |
-| `--cache-type-v q4_0` | KV 缓存 Value 量化，同上 |
-| `--mlock` | 调用 mlock() 系统调用，物理锁死已分配内存，禁止 OS swap 到虚拟内存/硬盘——保证推理速度不因内存换页骤降 |
+| 参数 | 解释 |
+|------|------|
+| `-m` | 模型文件路径 |
+| `-ngl 99` | GPU 层卸载数。99 = 除 MoE 专家层外全部放 GPU（注意力层参数量小，量化后显存占用极低） |
+| `--n-cpu-moe 999` | **核心优化。** 把 MoE 专家层全部留在 CPU 内存——350 亿参数的专家权重不走 GPU 显存。这是 12GB 显卡能跑 35B 模型的根本原因 |
+| `--flash-attn on` | Flash Attention——分块计算替代 O(n²) 全局注意力矩阵，O(n) 内存且加速推理 |
+| `--jinja` | Jinja 模板引擎——支持 function calling 和结构化输出的聊天模板 |
+| `--reasoning off` | 禁用推理模式。Reasoning 生成隐藏思考 Token，占上下文且写小说不需要 |
+| `-c 131072` | 上下文窗口。131072 = 128K。显存充裕可开到 260000 |
+| `-t 12` | CPU 推理线程数。设为物理核心数 |
+| `-b 1024` | 批处理大小——一次并行处理多少 Token |
+| `-ub 512` | 微批大小——batch 的再切分，辅助内存管理 |
+| `--cache-type-k q4_0` | **KV 缓存 Key 量化到 4-bit。** 260K 上下文不带量化需 10GB+ 显存，量化后仅 2~3GB |
+| `--cache-type-v q4_0` | KV 缓存 Value 量化到 4-bit，同上 |
+| `--mlock` | mlock() 物理锁内存——禁止 OS swap，保证推理速度不因换页骤降 |
+
+> **最终效果：** 总显存 ~5.5GB，速度 50~60 token/秒。CPU 内存带宽是速度瓶颈。
+>
+> 如果你的显存更大（如 4090 24G），可以把 `-c` 开到 260000、`--cache-type-k/v` 改用 f16（不量化 KV 缓存，精度更高）。
 
 4. 在软件设置里：供应商选自托管，地址 `http://127.0.0.1:8080`，模式选 ⚡ Slot
+5. 分角色参数里把写作、分析、审查全指定为这个本地 LLM → 保存
 
-> 再次提醒：本地跑不要钱的代价是**写作质量确实不如大模型**。如果你的故事对文笔要求高，还是买 API 吧。
+> 再次提醒：本地跑不要钱的代价是**写作质量确实不如大模型**。如果你的故事对文笔要求高，还是买 API 吧。也可以混合用——分析用本地省钱，写作用 API 保质量。
 
 ---
 
@@ -595,21 +622,41 @@ Real-time analysis progress. Full conversation logs for every analysis run.
 
 ## 7. Local LLM Setup (Free, Needs GPU)
 
-8GB+ NVIDIA GPU required.
+This setup runs a **35B MoE model on just 12GB VRAM**—using a CPU/GPU split strategy.
 
-1. Download Windows CUDA build of [llama.cpp](https://github.com/ggerganov/llama.cpp/releases) → extract to `LLM/bin/`
-2. Download Qwen2.5-7B-Instruct GGUF → place in `LLM/models/`
+### The Strategy
+
+Model: **Qwen3.6-35B-A3B**—MoE architecture: 35B total params, only 3B active per inference. Core trick: **trade CPU RAM for GPU VRAM.**
+
+- **Attention layers → GPU**: 99 lightweight layers stay on GPU after quantization
+- **MoE experts → CPU**: `--n-cpu-moe 999` keeps all expert weights in CPU RAM. VRAM drops from ~20GB to under 6GB
+- **Dual quantization**: Q4_K_M weights + Q4_0 KV cache. 260K context cache: 10GB+ → 2-3GB
+- **Result**: ~5.5GB VRAM, 50-60 tok/s
+
+### Hardware
+
+- GPU: **12GB+ VRAM**
+- CPU: **8+ cores, AVX2 support**
+- RAM: **32GB+ DDR4** (dual-channel / DDR5 recommended)
+
+### Steps
+
+1. Download [llama.cpp Windows CUDA build](https://github.com/ggerganov/llama.cpp/releases) → extract to `LLM/bin/`
+2. Download **Qwen3.6-35B-A3B GGUF** (Q4_K_M) → `LLM/models/`
 3. Create `LLM/start.bat`:
 
 ```bat
 bin\llama-server.exe ^
-  -m "models\your-model.gguf" ^
+  -m "models\Qwen3.6-35B-A3B-Q4_K_M.gguf" ^
   -ngl 99 ^
+  --n-cpu-moe 999 ^
   --flash-attn on ^
   --jinja ^
   --reasoning off ^
   -c 131072 ^
   -t 12 ^
+  -b 1024 ^
+  -ub 512 ^
   --cache-type-k q4_0 ^
   --cache-type-v q4_0 ^
   --mlock ^
@@ -617,18 +664,26 @@ bin\llama-server.exe ^
   --port 8080
 ```
 
-**Key params:**
-- `-ngl 99` — offload all layers to GPU (reduce if VRAM-constrained)
-- `--flash-attn on` — Flash Attention: reduces memory from O(n²) to O(n), saves VRAM and speeds inference
-- `--jinja` — Jinja templating engine: enables proper chat template formatting with function calling support
-- `--reasoning off` — disables Chain-of-Thought (hidden reasoning tokens that waste context for creative writing)
-- `--cache-type-k q4_0` / `--cache-type-v q4_0` — **KV cache 4-bit quantization. Critical: reduces 128K context cache from ~12-16GB to ~3-4GB**
-- `-t 12` — CPU threads for inference (match physical core count)
-- `-b 1024` / `-ub 512` — batch and micro-batch sizes for parallel token processing
-- `--mlock` — mlock() physical memory lock, prevents OS swap to disk
-- With RTX 4090 24GB, increase `-c 260000`.
+| Param | What It Does |
+|-------|-------------|
+| `-ngl 99` | GPU offloading: 99 = all layers except MoE experts. Attention layers are tiny when quantized |
+| `--n-cpu-moe 999` | **The magic trick.** Keeps all MoE expert weights in CPU RAM—GPU never touches them. 12GB cards can now run 35B models |
+| `--flash-attn on` | Flash Attention: O(n) memory instead of O(n²) |
+| `--jinja` | Jinja template engine for structured chat formatting |
+| `--reasoning off` | Disables Chain-of-Thought—hidden reasoning tokens waste context |
+| `-c 131072` | Context window: 128K. Up to 260K with 24GB VRAM |
+| `-t 12` | CPU threads—match core count |
+| `-b 1024` / `-ub 512` | Batch and micro-batch for parallel processing |
+| `--cache-type-k q4_0` | **KV Key 4-bit quant.** 260K context: 10GB+ → 2-3GB |
+| `--cache-type-v q4_0` | KV Value quant, ditto |
+| `--mlock` | mlock() prevents OS swap to disk |
 
-4. In app: provider = Self-hosted, URL = `http://127.0.0.1:8080`, mode = ⚡ Slot.
+> With RTX 4090 24GB, increase `-c` to 260000, use f16 KV cache.
+
+4. In app: provider = Self-hosted, URL = `http://127.0.0.1:8080`, mode = ⚡ Slot
+5. Assign this LLM to all roles in ⚙️ Settings
+
+> Reminder: local LLMs are free but writing quality trails cloud models. Mix: local for analysis, API for writing.
 
 ---
 
