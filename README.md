@@ -8,7 +8,7 @@
 
 <br>
 
-**Super writer, flowing freely.**
+**Super writer, elegantly fluent.**
 
 *——Your private AI writing team*
 
