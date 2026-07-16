@@ -12105,14 +12105,22 @@ async function _getChapterFiles(projectName){
 /** 模糊记忆压缩：切片 + LLM 压缩，文件名按 LLM+上下文类型区分，完成后存 manifest */
 async function _compressFullText(projectName, fullText, optimalMax, recommendedInput, profile, llmKey, contextType = 'max'){
   const totalTokens = Math.ceil((fullText||'').length * 0.6);
-  if(totalTokens <= optimalMax) return fullText;
+  const inputBudget = Math.floor(optimalMax * 0.7);
+  if(totalTokens <= inputBudget) return fullText;
 
   const compressPromptTokens = Math.ceil(COMPRESS_PROMPT.length * 0.6) + 200;
   const safeSliceTokens = Math.max(5000, recommendedInput - compressPromptTokens);
   const targetTotal = Math.floor(optimalMax * 0.7);
   const sliceDir = 'fuzzyMemory';
 
-  // 第1步：切片存盘（文件名含 llmKey）
+  // ★ 计算章节范围前缀，用于文件命名
+  const _p = DB.projects[projectName];
+  const _chNums = (_p?.chapters||[]).map(c=>c.number).filter(n=>n).sort((a,b)=>a-b);
+  const chPrefix = _chNums.length >= 2 
+    ? 'chapters_'+String(_chNums[0]).padStart(3,'0')+'-'+String(_chNums[_chNums.length-1]).padStart(3,'0')+'_'
+    : (_chNums.length === 1 ? 'chapters_'+String(_chNums[0]).padStart(3,'0')+'_' : '');
+
+  // 第1步：切片存盘（文件名含章节范围+llmKey）
   let numSlices = 0, pos = 0;
   const charsPerSlice = Math.floor(safeSliceTokens / 0.6);
   while(pos < fullText.length){
@@ -12126,68 +12134,106 @@ async function _compressFullText(projectName, fullText, optimalMax, recommendedI
       if(boundary > 0) end = searchStart + boundary;
     }
     numSlices++;
-    await saveFileToDisk(projectName, sliceDir, 'slice_'+String(numSlices).padStart(2,'0')+'_'+llmKey+'_'+contextType+'.md', fullText.substring(pos, end).trim());
+    await saveFileToDisk(projectName, sliceDir, chPrefix+'slice_'+String(numSlices).padStart(2,'0')+'_'+llmKey+'_'+contextType+'.md', fullText.substring(pos, end).trim());
     pos = end;
   }
 
-  const targetPerSlice = Math.max(1000, Math.floor(targetTotal / numSlices));
+  // ★ 2-pass 压缩：两轮均以70%为目标，合并后<95%即成功；两轮均≥95%则放弃
+  const _compressSessionKey = profile?.name || '_default';
+  let result = '', successPass = 0;
+  const passes = [
+    {label:'第1轮'},
+    {label:'第2轮'}
+  ];
+  const boundPct = 0.95;  // 统一验证上限：合并后 < 95% optimalMax
 
-  // 第2步：逐片从磁盘读取 → 发LLM → 存压缩结果
-  for(let i = 1; i <= numSlices; i++){
-    const sliceFile = 'slice_'+String(i).padStart(2,'0')+'_'+llmKey+'_'+contextType+'.md';
-    const sliceContent = await readFileFromDisk(projectName, sliceDir, sliceFile);
-    if(!sliceContent){ toast(`⚠️ 切片${i}文件丢失`, 'warn'); continue; }
+  for(const pass of passes){
+    // ★ 释放旧session，每轮压缩使用独立slot
+    if(_llmSessions[_compressSessionKey]){
+      _llmSessions[_compressSessionKey].close();
+      delete _llmSessions[_compressSessionKey];
+      logAnalysis('模糊记忆压缩', pass.label, '已释放旧session，创建独立slot');
+    }
 
-    const sliceTokens = Math.ceil((sliceContent||'').length * 0.6);
-    const targetTokens = Math.min(targetPerSlice, sliceTokens);
-    const pct = Math.round((1 - targetTokens / Math.max(1, sliceTokens)) * 100);
-    toast(`📦 压缩 ${i}/${numSlices}（目标 −${pct}%）...`);
+    const passTarget = targetTotal;  // 两轮统一使用70%目标
+    const perSlice = Math.max(500, Math.floor(passTarget / numSlices));
 
-    const userMsg = COMPRESS_PROMPT + '\n\n文章切片+目标大小。\n收到任务后请直接输出结果。\n\n目标压缩后大小：约 ' + targetTokens + ' tokens\n\n' + sliceContent;
-    const compressedFile = 'compressed_slice_'+String(i).padStart(2,'0')+'_'+llmKey+'_'+contextType+'.md';
     try {
-      const result = await callLLM([{role:'user', content: userMsg}], {temperature:0.3, profile: profile.name});
-      const finalText = result || sliceContent;
-      await saveFileToDisk(projectName, sliceDir, compressedFile, finalText);
-      const verify = await readFileFromDisk(projectName, sliceDir, compressedFile);
-      if(!verify) throw new Error('压缩结果存盘后读取验证失败');
-      const preview = (finalText || '').substring(0, 300) + ((finalText||'').length > 300 ? '...' : '');
-      logAnalysis('模糊记忆压缩', '第'+i+'片', '原文'+sliceTokens+' tokens\n\n压缩结果前300字:\n'+preview);
-    } catch(e){
-      toast(`⚠️ 第${i}片压缩失败: ${e.message}`, 'warn');
-      await saveFileToDisk(projectName, sliceDir, compressedFile, sliceContent);
-      logAnalysis('模糊记忆压缩', '第'+i+'片', '失败: '+e.message+'，保留原文');
+      // 逐片压缩
+      for(let i = 1; i <= numSlices; i++){
+        const sliceFile = chPrefix+'slice_'+String(i).padStart(2,'0')+'_'+llmKey+'_'+contextType+'.md';
+        const sliceContent = await readFileFromDisk(projectName, sliceDir, sliceFile);
+        if(!sliceContent){ toast(`⚠️ 切片${i}文件丢失`, 'warn'); continue; }
+
+        const sliceTokens = Math.ceil((sliceContent||'').length * 0.6);
+        const targetTokens = Math.min(perSlice, sliceTokens);
+        const pct = Math.round((1 - targetTokens / Math.max(1, sliceTokens)) * 100);
+        toast(`📦 ${pass.label} 压缩 ${i}/${numSlices}（目标 −${pct}%）...`);
+
+        const userMsg = COMPRESS_PROMPT + '\n\n文章切片+目标大小。\n收到任务后请直接输出结果。\n\n目标压缩后大小：约 ' + targetTokens + ' tokens\n\n' + sliceContent;
+        const compressedFile = chPrefix+'compressed_slice_'+String(i).padStart(2,'0')+'_'+llmKey+'_'+contextType+'.md';
+        try {
+          const cr = await callLLM([{role:'user', content: userMsg}], {temperature:0.3, profile: profile.name});
+          const finalText = cr || sliceContent;
+          await saveFileToDisk(projectName, sliceDir, compressedFile, finalText);
+          const verify = await readFileFromDisk(projectName, sliceDir, compressedFile);
+          if(!verify) throw new Error('压缩结果存盘后读取验证失败');
+          const preview = (finalText || '').substring(0, 300) + ((finalText||'').length > 300 ? '...' : '');
+          logAnalysis('模糊记忆压缩', pass.label+' 第'+i+'片', '原文'+sliceTokens+' tokens\n\n压缩结果前300字:\n'+preview);
+        } catch(e){
+          toast(`⚠️ 第${i}片压缩失败: ${e.message}`, 'warn');
+          await saveFileToDisk(projectName, sliceDir, compressedFile, sliceContent);
+          logAnalysis('模糊记忆压缩', pass.label+' 第'+i+'片', '失败: '+e.message+'，保留原文');
+        }
+      }
+
+      // 合并
+      result = '';
+      for(let i = 1; i <= numSlices; i++){
+        const compressed = await readFileFromDisk(projectName, sliceDir, chPrefix+'compressed_slice_'+String(i).padStart(2,'0')+'_'+llmKey+'_'+contextType+'.md');
+        if(compressed) result += compressed + '\n\n';
+      }
+      result = result.trim();
+
+      const fk = Math.round(Math.ceil((result||'').length*0.6)/1000);
+      const bk = Math.round(boundPct * optimalMax / 1000);
+      if(fk < bk){
+        successPass = passes.indexOf(pass) + 1;
+        logAnalysis('模糊记忆压缩', pass.label+' ✅', fk+'K < '+bk+'K（95%），达标');
+        break;
+      }
+      logAnalysis('模糊记忆压缩', pass.label+' ❌', fk+'K ≥ '+bk+'K（95%），不达标，进入下一轮');
+    } finally {
+      // ★ 释放本轮压缩session
+      if(_llmSessions[_compressSessionKey]){
+        _llmSessions[_compressSessionKey].close();
+        delete _llmSessions[_compressSessionKey];
+      }
     }
   }
 
-  // 第3步：合并所有压缩片 → 完整文档
-  let result = '';
-  for(let i = 1; i <= numSlices; i++){
-    const compressed = await readFileFromDisk(projectName, sliceDir, 'compressed_slice_'+String(i).padStart(2,'0')+'_'+llmKey+'_'+contextType+'.md');
-    if(compressed) result += compressed + '\n\n';
+  if(!successPass){
+    toast('⚠️ 两轮压缩均 ≥95%上下文，放弃压缩，将改用分批阅读策略', 'warn');
+    logAnalysis('模糊记忆压缩', '放弃', '两轮压缩均≥95%，返回未压缩原文');
+    return fullText;
   }
-  result = result.trim();
 
-  // 存合并文件 + manifest
-  const compressedFullFile = 'compressed_full_'+llmKey+'_'+contextType+'.md';
+  // 存合并文件 + manifest（仅成功轮次的结果）
+  const compressedFullFile = chPrefix+'compressed_full_'+llmKey+'_'+contextType+'.md';
   await saveFileToDisk(projectName, sliceDir, compressedFullFile, result);
 
   const chapterFiles = await _getChapterFiles(projectName);
-  await saveFileToDisk(projectName, sliceDir, 'manifest_'+llmKey+'_'+contextType+'.json', {
+  await saveFileToDisk(projectName, sliceDir, chPrefix+'manifest_'+llmKey+'_'+contextType+'.json', {
     llmKey, updatedAt: new Date().toISOString(),
     chapterFiles, chapterCount: chapterFiles.length,
     originalTokens: totalTokens, compressedTokens: Math.ceil(result.length * 0.6),
-    optimalMax, recommendedInput
+    optimalMax, recommendedInput, successPass
   });
 
   const finalK = Math.round(Math.ceil((result||'').length*0.6)/1000);
-  if(finalK >= Math.round(optimalMax/1000)){
-    toast('⚠️ 压缩后仍有 '+finalK+'K，超出模型容量，将改用分批阅读策略', 'warn');
-    logAnalysis('模糊记忆压缩', '完成但效果不足', '压缩后 '+finalK+'K 仍 >= '+Math.round(optimalMax/1000)+'K，返回原文本');
-    return fullText;
-  }
-  toast('✅ 压缩完成：' + numSlices + ' 片 → ' + finalK + 'K tokens → fuzzyMemory/' + compressedFullFile);
-  logAnalysis('模糊记忆压缩', '完成', '共 '+numSlices+' 片，目标 '+Math.round(targetTotal/1000)+'K，实际 '+finalK+'K，已存 '+compressedFullFile);
+  const finalTargetK = Math.round(targetTotal/1000);
+  toast('✅ 压缩完成（'+successPass+'轮）：' + numSlices + ' 片 → ' + finalK + 'K tokens → fuzzyMemory/' + compressedFullFile);
+  logAnalysis('模糊记忆压缩', '完成', '共 '+numSlices+' 片，'+successPass+'轮达标，目标 '+finalTargetK+'K，实际 '+finalK+'K，已存 '+compressedFullFile);
   return result;
 }
 
@@ -12200,21 +12246,34 @@ async function _ensureFuzzyMemory(projectName, profile, optimalMax, recommendedI
   const totalTokens = estimateTokens(fullText);
   const fileBase = llmKey + '_' + contextType;
 
-  if(totalTokens <= optimalMax){
-    logAnalysis('模糊记忆', '无需压缩', '全文 '+Math.round(totalTokens/1000)+'K ≤ 上下文 '+Math.round(optimalMax/1000)+'K');
+  const inputBudget = Math.floor(optimalMax * 0.7);
+  if(totalTokens <= inputBudget){
+    logAnalysis('模糊记忆', '无需压缩', '全文 '+Math.round(totalTokens/1000)+'K ≤ 输入预算 '+Math.round(inputBudget/1000)+'K（70%上下文）');
     return fullText;
   }
 
-  // 检查磁盘上是否已有该 LLM+上下文类型的压缩文件（优先新格式 _rec/_max，回退旧格式无后缀）
-  let existingCompressed = await readFileFromDisk(projectName, 'fuzzyMemory', 'compressed_full_'+fileBase+'.md');
+  // 检查磁盘上是否已有该 LLM+上下文类型的压缩文件（优先新格式含章节范围，回退旧格式）
+  const _p2 = DB.projects[projectName];
+  const _chNums2 = (_p2?.chapters||[]).map(c=>c.number).filter(n=>n).sort((a,b)=>a-b);
+  const _chPrefix2 = _chNums2.length >= 2 
+    ? 'chapters_'+String(_chNums2[0]).padStart(3,'0')+'-'+String(_chNums2[_chNums2.length-1]).padStart(3,'0')+'_'
+    : (_chNums2.length === 1 ? 'chapters_'+String(_chNums2[0]).padStart(3,'0')+'_' : '');
+  let existingCompressed = await readFileFromDisk(projectName, 'fuzzyMemory', _chPrefix2+'compressed_full_'+fileBase+'.md');
   let existingManifest = fileBase;
+  // 回退：先试新格式无章节前缀，再试旧格式
+  if(!existingCompressed){
+    existingCompressed = await readFileFromDisk(projectName, 'fuzzyMemory', 'compressed_full_'+fileBase+'.md');
+  }
   if(!existingCompressed){
     // 回退旧格式：compressed_full_{llmKey}.md（无 contextType 后缀）
     existingCompressed = await readFileFromDisk(projectName, 'fuzzyMemory', 'compressed_full_'+llmKey+'.md');
     existingManifest = llmKey;
   }
   if(existingCompressed){
-    const manifestRaw = await readFileFromDisk(projectName, 'fuzzyMemory', 'manifest_'+existingManifest+'.json');
+    // 读取 manifest：先试新格式（章节前缀），回退旧格式
+    const _manifestBase = (existingManifest === llmKey) ? llmKey : fileBase;
+    let manifestRaw = await readFileFromDisk(projectName, 'fuzzyMemory', _chPrefix2+'manifest_'+_manifestBase+'.json');
+    if(!manifestRaw) manifestRaw = await readFileFromDisk(projectName, 'fuzzyMemory', 'manifest_'+_manifestBase+'.json');
     let manifest = null;
     try { if(manifestRaw) manifest = JSON.parse(manifestRaw); } catch(e){}
 
@@ -12222,7 +12281,7 @@ async function _ensureFuzzyMemory(projectName, profile, optimalMax, recommendedI
     const cachedFiles = manifest?.chapterFiles || [];
     const filesChanged = JSON.stringify(currentChapterFiles) !== JSON.stringify(cachedFiles);
 
-    if(!filesChanged && (manifest?.compressedTokens || 0) <= optimalMax){
+    if(!filesChanged && (manifest?.compressedTokens || 0) <= inputBudget){
       toast('📦 复用已有模糊记忆（'+existingManifest+'）');
       logAnalysis('模糊记忆', '复用缓存', existingManifest+' '+Math.round((manifest?.compressedTokens||0)/1000)+'K，'+currentChapterFiles.length+'章');
       return existingCompressed;
@@ -12248,10 +12307,10 @@ async function _ensureFuzzyMemory(projectName, profile, optimalMax, recommendedI
       const mergedText = existingCompressed + '\n\n' + newContent;
       const mergedTokens = estimateTokens(mergedText);
 
-      if(mergedTokens <= optimalMax){
+      if(mergedTokens <= inputBudget){
         toast('📦 模糊记忆合并新章节（'+fileBase+'）');
-        await saveFileToDisk(projectName, 'fuzzyMemory', 'compressed_full_'+fileBase+'.md', mergedText);
-        await saveFileToDisk(projectName, 'fuzzyMemory', 'manifest_'+fileBase+'.json', {
+        await saveFileToDisk(projectName, 'fuzzyMemory', _chPrefix2+'compressed_full_'+fileBase+'.md', mergedText);
+        await saveFileToDisk(projectName, 'fuzzyMemory', _chPrefix2+'manifest_'+fileBase+'.json', {
           llmKey, contextType, updatedAt: new Date().toISOString(),
           chapterFiles: currentChapterFiles, chapterCount: currentChapterFiles.length,
           originalTokens: totalTokens, compressedTokens: mergedTokens,
@@ -12323,6 +12382,15 @@ async function analyzeProject(name, useRecommendedMax = false){
     }
   }
   if(!fullText || fullText.length < 50){ toast('章节内容为空','error'); return; }
+
+  // ★ 保存合并全文到 chapters/，命名含章节范围
+  const _chNums = (p.chapters||[]).map(c=>c.number).filter(n=>n).sort((a,b)=>a-b);
+  const _fulltextName = _chNums.length >= 2
+    ? 'chapters_'+String(_chNums[0]).padStart(3,'0')+'_to_'+String(_chNums[_chNums.length-1]).padStart(3,'0')+'_full.md'
+    : (_chNums.length === 1 ? 'chapters_'+String(_chNums[0]).padStart(3,'0')+'_full.md' : 'full_text.md');
+  await saveFileToDisk(name, 'chapters', _fulltextName, fullText);
+  logAnalysis('模糊记忆', '全文存盘', _fulltextName+' ('+Math.round(estimateTokens(fullText)/1000)+'K)');
+
   _isAnalyzing = true;
   window.onbeforeunload = function(){return '分析进行中，刷新将中断分析进程';};
 
@@ -12336,47 +12404,45 @@ async function analyzeProject(name, useRecommendedMax = false){
     function _norm1(t){ return t.replace(/[\uff01-\uff5e]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xfee0)).replace(/\u3000/g,' '); }
     function _norm2(t){ return t.replace(/[\s\n\r【】《》「」『』（）\[\]""''，。、；：？！·—…\.,;:!?'"\(\)\[\]]/g,''); }
 
-    // ─── 第1步：询问 LLM 上下文能力 ───
-    toast('🔍 第1步：探测模型能力...');
-    const _probePrompt = '请告知我模型上下文能力，用以下固定格式回复，不要包含其他文字：\n最大上下文上限:{数字}K\n推荐上下文上限:{数字}K\n建议每次输入:{数字}K\n';
-    logAnalysis('第1步', _probePrompt, '');
-    const contextResponse = await callLLM([
-      {role:'user', content: _probePrompt }
-    ], {temperature:0.1, profile: profile.name});
-    logAnalysis('第1步 回复', '', contextResponse);
-
-    // 解析固定格式获取上下文上限和建议输入大小
+    // ─── 第1步：获取 LLM 上下文能力（优先查硬编码表，未知供应商走探针） ───
     let optimalMax = 50000;
     let recommendedInput = 30000;
-    const maxMatch = contextResponse.match(/最大上下文上限:(\d+)K/i);
-    const recommendMatch = contextResponse.match(/推荐上下文上限:(\d+)K/i);
-    const inputMatch = contextResponse.match(/建议每次输入:(\d+)K/i);
-    if(useRecommendedMax){
-      // 角色池按钮：推荐上下文上限优先
-      if(recommendMatch) optimalMax = parseInt(recommendMatch[1]) * 1000;
-      if(maxMatch && !recommendMatch) optimalMax = parseInt(maxMatch[1]) * 1000;
+    const _known = _getKnownContextLimits(profile);
+    if(_known){
+      optimalMax = _known.optimalMax;
+      recommendedInput = _known.recommendedInput;
+      logAnalysis('第1步', '硬编码上下文: '+_known.source, Math.round(optimalMax/1000)+'K / 建议输入 '+Math.round(recommendedInput/1000)+'K');
+      toast('🔍 第1步：已知供应商 '+_known.source+'，跳过探针');
     } else {
-      // 分析/再次分析：仅关联最大上下文上限
-      if(maxMatch) optimalMax = parseInt(maxMatch[1]) * 1000;
+      toast('🔍 第1步：探测模型能力...');
+      const _probePrompt = '请告知我你是什么模型，模型上下文能力，用以下固定格式回复，不要包含其他文字：\n最大上下文上限:{数字}K\n推荐上下文上限:{数字}K\n建议每次输入:{数字}K\n';
+      logAnalysis('第1步', _probePrompt, '');
+      const contextResponse = await callLLM([
+        {role:'user', content: _probePrompt }
+      ], {temperature:0.1, profile: profile.name});
+      logAnalysis('第1步 回复', '', contextResponse);
+      const maxMatch = contextResponse.match(/最大上下文上限:(\d+)K/i);
+      const recommendMatch = contextResponse.match(/推荐上下文上限:(\d+)K/i);
+      const inputMatch = contextResponse.match(/建议每次输入:(\d+)K/i);
+      if(useRecommendedMax){
+        if(recommendMatch) optimalMax = parseInt(recommendMatch[1]) * 1000;
+        if(maxMatch && !recommendMatch) optimalMax = parseInt(maxMatch[1]) * 1000;
+      } else {
+        if(maxMatch) optimalMax = parseInt(maxMatch[1]) * 1000;
+      }
+      if(inputMatch) recommendedInput = parseInt(inputMatch[1]) * 1000;
     }
-    if(inputMatch) recommendedInput = parseInt(inputMatch[1]) * 1000;
     let totalTokens = estimateTokens(fullText);
     logAnalysis('配置', '文档约 '+Math.round(totalTokens/1000)+'K，上下文 '+Math.round(optimalMax/1000)+'K，建议 '+Math.round(recommendedInput/1000)+'K', '');
 
-    // ★ 统一模糊记忆入口（contextType 随 useRecommendedMax 切换）
+    // ★ fullText = 发送给LLM分析的待发送全文章节（压缩全文 或 原定稿全文）
+    //    由 _ensureFuzzyMemory 决定：无需压缩则返回原文；需要压缩则返回模糊记忆压缩正文
     const contextType = useRecommendedMax ? 'rec' : 'max';
     fullText = await _ensureFuzzyMemory(name, profile, optimalMax, recommendedInput, fullText, contextType);
     totalTokens = Math.ceil((fullText||'').length * 0.6);
 
-    // ★ 触发模糊记忆后，后续必须从磁盘文件读取（保证文件是唯一数据源）
-    const _llmKey = _getLLMFileKey(profile);
-    const _compressedFile = 'compressed_full_'+_llmKey+'_'+contextType+'.md';
-    const _diskText = await readFileFromDisk(name, 'fuzzyMemory', _compressedFile);
-    if(_diskText && _diskText.length > 50){
-      fullText = _diskText;
-      totalTokens = Math.ceil(fullText.length * 0.6);
-      logAnalysis('模糊记忆', '从磁盘读取', _compressedFile+' ('+Math.round(totalTokens/1000)+'K)');
-    }
+    // ★ _ensureFuzzyMemory 已返回正确的压缩正文或原文，直接使用
+    logAnalysis('模糊记忆', '已就绪', Math.round(totalTokens/1000)+'K '+((fullText||'').length < (p.rawContent||'').length ? '(压缩后)' : '(原文)'));
 
     // ★ 技能学习将在分析完成后顺序执行（不在此处并发启动）
     // const skillsPromise = analyzeSkills(name, fullText, av, profile);
@@ -12739,19 +12805,23 @@ async function analyzeSkills(projectName, fullText, av, mainProfile){
   try {
     logAnalysis('📚 技能学习', '开始学习', '使用LLM: '+skillProfile.name);
 
-    // ─── 第1步：探测模型能力 ───
-    const contextResponse = await callLLM([
-      {role:'user', content:'请告知我模型上下文能力，用以下固定格式回复，不要包含其他文字：\n最大上下文上限:{数字}K\n推荐上下文上限:{数字}K\n建议每次输入:{数字}K\n'}
-    ], {temperature:0.1, profile: skillProfile.name});
-
+    // ─── 第1步：获取 LLM 上下文能力（优先查硬编码表） ───
     let optimalMax = 50000;
     let recommendedInput = 30000;
-    const maxMatch = contextResponse.match(/最大上下文上限:(\d+)K/i);
-    const recommendMatch = contextResponse.match(/推荐上下文上限:(\d+)K/i);
-    const inputMatch = contextResponse.match(/建议每次输入:(\d+)K/i);
-    if(maxMatch) optimalMax = parseInt(maxMatch[1]) * 1000;
-    // 技能学习：仅关联最大上下文上限，不回退
-    if(inputMatch) recommendedInput = parseInt(inputMatch[1]) * 1000;
+    const _known = _getKnownContextLimits(skillProfile);
+    if(_known){
+      optimalMax = _known.optimalMax;
+      recommendedInput = _known.recommendedInput;
+      logAnalysis('📚 技能学习配置', '硬编码: '+_known.source, Math.round(optimalMax/1000)+'K / 建议输入 '+Math.round(recommendedInput/1000)+'K');
+    } else {
+      const contextResponse = await callLLM([
+        {role:'user', content:'请告知我你是什么模型，模型上下文能力，用以下固定格式回复，不要包含其他文字：\n最大上下文上限:{数字}K\n推荐上下文上限:{数字}K\n建议每次输入:{数字}K\n'}
+      ], {temperature:0.1, profile: skillProfile.name});
+      const maxMatch = contextResponse.match(/最大上下文上限:(\d+)K/i);
+      const inputMatch = contextResponse.match(/建议每次输入:(\d+)K/i);
+      if(maxMatch) optimalMax = parseInt(maxMatch[1]) * 1000;
+      if(inputMatch) recommendedInput = parseInt(inputMatch[1]) * 1000;
+    }
     let totalTokens = Math.ceil(fullText.length * 0.6);
     logAnalysis('📚 技能学习配置', '文档约 '+Math.round(totalTokens/1000)+'K，上下文 '+Math.round(optimalMax/1000)+'K，建议 '+Math.round(recommendedInput/1000)+'K', '');
 
@@ -13146,21 +13216,77 @@ function showChapterModal(chapterNum){
 const DIM_KEYS = ['plot','character','dialogue','pacing','style','consistency','emotional_impact','originality','readability','ai_detection_risk','character_psychology','social_dynamics','exceptional_authenticity'];
 const DIM_NAMES = ['情节','角色','对话','节奏','文风','一致性','情感冲击','原创性','可读性','AI味检测','角色心理','角色关系','情节合理性'];
 const PROVIDER_CONFIG = {
+  // ─── 国内主流 ───
   deepseek:{label:'DeepSeek',envKey:'DEEPSEEK_API_KEY',base_url:'https://api.deepseek.com',
-    models:['deepseek-v4-pro','deepseek-v4-flash'],defaultModel:'deepseek-v4-flash',maxContext:1000000,
+    models:['deepseek-v4-pro','deepseek-v4-flash'],defaultModel:'deepseek-v4-flash',
+    maxContext:1000000, recommendedContext:128000, recommendedInput:32000,
     supports:{temperature:true,max_tokens:true,thinking:true,reasoning_effort:true},
     params:{temperature:{min:0,max:2,default:1.0,step:0.05},max_tokens:{min:100,max:65536,default:8192,step:500},
       reasoning_effort:{options:['low','medium','high'],default:'medium'}}},
+  qwen:{label:'阿里千问',envKey:'DASHSCOPE_API_KEY',base_url:'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    models:['qwen3.7-max','qwen3.7-plus','qwen3.6-flash'],defaultModel:'qwen3.7-plus',
+    maxContext:1000000, recommendedContext:128000, recommendedInput:32000,
+    supports:{temperature:true,max_tokens:true,thinking:true},
+    params:{temperature:{min:0,max:2,default:0.7,step:0.05},max_tokens:{min:100,max:65536,default:8192,step:500}}},
+  kimi:{label:'Kimi (月之暗面)',envKey:'MOONSHOT_API_KEY',base_url:'https://api.moonshot.cn/v1',
+    models:['kimi-k2.7-code','kimi-k2.6'],defaultModel:'kimi-k2.6',
+    maxContext:256000, recommendedContext:128000, recommendedInput:32000,
+    supports:{temperature:true,max_tokens:true},
+    params:{temperature:{min:0,max:2,default:0.7,step:0.05},max_tokens:{min:100,max:65536,default:8192,step:500}}},
+  glm:{label:'智谱GLM',envKey:'ZHIPU_API_KEY',base_url:'https://open.bigmodel.cn/api/paas/v4',
+    models:['GLM-5.2','GLM-4.7','GLM-4.7-FlashX'],defaultModel:'GLM-4.7-FlashX',
+    maxContext:1000000, recommendedContext:128000, recommendedInput:32000,
+    supports:{temperature:true,max_tokens:true},
+    params:{temperature:{min:0,max:2,default:0.7,step:0.05},max_tokens:{min:100,max:65536,default:8192,step:500}}},
+  doubao:{label:'字节豆包',envKey:'ARK_API_KEY',base_url:'https://ark.cn-beijing.volces.com/api/v3',
+    models:['doubao-seed-evolving','doubao-seed-2-1-pro','doubao-seed-2-1-turbo'],defaultModel:'doubao-seed-2-1-turbo',
+    maxContext:1024000, recommendedContext:256000, recommendedInput:32000,
+    supports:{temperature:true,max_tokens:true},
+    params:{temperature:{min:0,max:2,default:0.7,step:0.05},max_tokens:{min:100,max:65536,default:8192,step:500}}},
+  // ─── 海外 ───
   openai:{label:'OpenAI',envKey:'OPENAI_API_KEY',base_url:'https://api.openai.com',
-    models:['gpt-4o','gpt-4o-mini','gpt-4.1','o3','o4-mini'],defaultModel:'gpt-4o',maxContext:128000,
+    models:['gpt-4o','gpt-4o-mini','gpt-4.1','o3','o4-mini'],defaultModel:'gpt-4o',
+    maxContext:128000, recommendedContext:64000, recommendedInput:32000,
     supports:{temperature:true,max_tokens:true,reasoning_effort:true},
     params:{temperature:{min:0,max:2,default:0.7,step:0.05},max_tokens:{min:100,max:128000,default:8192,step:500},
       reasoning_effort:{options:['low','medium','high'],default:'medium'}}},
+  anthropic:{label:'Anthropic Claude',envKey:'ANTHROPIC_API_KEY',base_url:'https://api.anthropic.com',
+    models:['claude-sonnet-4-20250514','claude-3.5-sonnet'],defaultModel:'claude-sonnet-4-20250514',
+    maxContext:200000, recommendedContext:100000, recommendedInput:32000,
+    supports:{temperature:true,max_tokens:true},
+    params:{temperature:{min:0,max:1,default:0.7,step:0.05},max_tokens:{min:100,max:65536,default:8192,step:500}}},
+  // ─── 兜底 ───
   custom:{label:'🛠️ 自定义',envKey:'CUSTOM_API_KEY',
     models:['custom-model'],defaultModel:'custom-model',maxContext:128000,
     supports:{temperature:true,max_tokens:true},
     params:{temperature:{min:0,max:2,default:0.7,step:0.05},max_tokens:{min:100,max:128000,default:4096,step:500}}},
 };
+
+/** 从已知供应商表获取上下文参数（按 baseUrl 匹配，唯一可靠标识）
+ *  @returns {{optimalMax, recommendedInput}|null} 命中则返回，null 表示需走 LLM 探针 */
+function _getKnownContextLimits(profile){
+  if(!profile) return null;
+  // 标准化 URL：去尾部斜杠、去 /v1 后缀
+  const url = (profile.baseUrl||'').replace(/\/+$/,'').replace(/\/v1\/?$/,'');
+  if(!url) return null;
+  // 本地地址不匹配供应商表
+  if(url.includes('127.0.0.1') || url.includes('localhost')) return null;
+
+  for(const [key, cfg] of Object.entries(PROVIDER_CONFIG)){
+    if(key === 'custom') continue;
+    const cfgUrl = (cfg.base_url||'').replace(/\/+$/,'').replace(/\/v1\/?$/,'');
+    if(cfgUrl === url){
+      if(cfg.maxContext){
+        return {
+          optimalMax: cfg.maxContext,
+          recommendedInput: cfg.recommendedInput || cfg.recommendedContext || 32000,
+          source: cfg.label
+        };
+      }
+    }
+  }
+  return null; // 未匹配到已知供应商，走 LLM 探针
+}
 
 // ═══════ Toast 通知 ═══════
 function toast(msg, type='success'){
@@ -15578,12 +15704,14 @@ async function callReviewer(projectName, chNum, content, role, temperature, dimW
   };
   const rc = roleConfig[role] || roleConfig.moderate;
   const dimSubList = DIM_KEYS.map((k,i)=>`${i+1}. 【${DIM_NAMES[i]}】\n   检查项：${DIM_SUB_CHECKS[k]||'综合评估'}`).join('\n\n');
-  // ★ 注入故事上下文以供连续性参考
+  // ★ 注入世界树/角色模型/节奏数据 + 故事状态以供审查参考
   const pCtx = DB.projects[projectName];
+  const writerCtx = pCtx ? getWriterContext(projectName) : '';
   const storyCtx = pCtx ? getStoryContextForReviewer(pCtx, chNum) : '';
   const systemPrompt = `你是一位专业的小说${rc.roleDesc}，担任「${rc.label}」角色。
 
 ${rc.desc}
+${writerCtx ? '\n'+writerCtx+'\n' : ''}
 ${storyCtx ? '\n'+storyCtx+'\n' : ''}
 审查维度（共13项，每项含具体检查子项）：
 ${dimSubList}
@@ -15617,7 +15745,7 @@ ${dimSubList}
   "improvements": ["改进建议描述"]
 }`;
 
-  const userPrompt = `请审查以下第${chNum}章内容：\n\n${content.substring(0,12000)}\n\n请给出评分和至少2条具体的修改建议（含原文和修改方案）。`;
+  const userPrompt = `请审查以下第${chNum}章内容：\n\n${content}\n\n请给出评分和至少2条具体的修改建议（含原文和修改方案）。`;
 
   try {
     const reply = await callLLM(

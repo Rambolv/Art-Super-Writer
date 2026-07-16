@@ -97,7 +97,7 @@
 
 **新手选这个（什么都不用装）：**
 
-1. 下载 `Art-Super-Writer-Portable.zip` → [点此下载](https://github.com/Rambolv/Art-Super-Writer/releases/download/v1.1/Art-Super-Writer-Portable.7z)
+1. 下载 `Art-Super-Writer-Portable.zip` → [点此下载](https://github.com/Rambolv/Art-Super-Writer/releases/download/v1.11/Art-Super-Writer-Portable.7z)
 2. 解压到任意文件夹
 3. 双击 **`超逸写手启动器.exe`**
 4. 浏览器自动打开 http://127.0.0.1:8899 → ✅ 完成
@@ -252,6 +252,16 @@ AI 生成的内容会显示在 **「📝 生成结果」** 框里。
 4. 分析完成后，右边会显示分析意见
 5. **看意见** → 决定怎么改
 6. **改文章** → 在审查室的编辑框里改
+
+### v1.11 新增功能 - 模糊记忆系统升级
+
+- **压缩触发阈值优化**：全文超过 70% 上下文窗口才触发压缩（之前是 100%），预留 30% 给系统提示词和输出，避免不必要压缩。
+- **两轮重压缩机制**：压缩后 ≥95% 上下文 → 自动重压缩一轮；两轮都失败才放弃，不再轻易返回未压缩原文。
+- **独立压缩 Slot**：压缩过程使用独立 slot ID，不影响主分析会话的 KV 缓存。
+- **切片文件命名标准化**：`fuzzyMemory/` 中文件命名包含章节范围（如 `chapters_001-003_slice_01_DEEPSEEK_max.md`），人眼可辨识是哪几章的压缩结果。
+- **全文文件持久化**：分析时自动生成 `chapters/chapters_001_to_N_full.md`（所有定稿章节合并），日常 LLM 调用可直接读取。
+- **LLM 能力探测升级**：提示词加入"你是什么模型"，让模型正确识别自身；新增主流供应商硬编码表（DeepSeek/千问/Kimi/GLM/豆包），按 baseUrl 匹配，跳过不可靠的 LLM 自报，彻底解决 DeepSeek 谎报上下文（128K→正确 1000K）的问题。
+- **审查官提示词增强**：三审查官现在收到世界树/角色池/节奏控制台数据，审查更全面；移除单章 12000 字符截断。
 
 ### v1.1 新增功能
 
@@ -487,7 +497,7 @@ DeepSeek、OpenAI 兼容接口、本地 llama.cpp。任何兼容 OpenAI Chat Com
 
 ### 1. Open the App
 
-**Recommended (no install):** Download `Art-Super-Writer-Portable.zip` → [Download here](https://github.com/Rambolv/Art-Super-Writer/releases/download/v1.1/Art-Super-Writer-Portable.7z) → Extract → Double-click `超逸写手启动器.exe` → browser opens at http://127.0.0.1:8899.
+**Recommended (no install):** Download `Art-Super-Writer-Portable.zip` → [Download here](https://github.com/Rambolv/Art-Super-Writer/releases/download/v1.11/Art-Super-Writer-Portable.7z) → Extract → Double-click `超逸写手启动器.exe` → browser opens at http://127.0.0.1:8899.
 
 > From source: `cd standalone` → `.venv\Scripts\activate` → `pip install flask requests` → Double-click launcher.
 
@@ -685,6 +695,16 @@ Satisfied? Click **"📌 Finalize"** → saves as an official chapter.
 4. Review suggestions appear on the right
 5. **Read suggestions** → decide what to change
 6. **Edit** → make changes in the review editor
+
+### v1.11 New Features - Fuzzy Memory System Upgrade
+
+- **Optimized compression threshold**: Compression triggers when full text exceeds 70% of context window (was 100%), reserving 30% for system prompts and output.
+- **Two-pass recompression**: If compressed result ≥95% context → auto retry once; only give up after two failures.
+- **Independent compression slot**: Compression process uses its own slot ID, keeping main analysis KV cache separate.
+- **Standardized slice naming**: `fuzzyMemory/` files now include chapter range (e.g., `chapters_001-003_slice_01_DEEPSEEK_max.md`), clearly showing which chapters are compressed.
+- **Full-text file persistence**: Auto-generates `chapters/chapters_001_to_N_full.md` (merged finalized chapters) on analysis, ready for daily LLM calls.
+- **LLM capability probe upgrade**: Improved prompt asking "what model are you" for accurate self-identification; hardcoded context table for major providers (DeepSeek/Qwen/Kimi/GLM/Doubao) matched by baseUrl, bypassing unreliable LLM self-reporting—fixes DeepSeek lying about context (128K→correct 1000K).
+- **Reviewer prompt enhancement**: All three reviewers now receive World Tree / Character Pool / Rhythm Console data; removed 12,000-char chapter truncation.
 
 ### v1.1 New Features
 
