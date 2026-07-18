@@ -114,7 +114,7 @@
 | ② | 地址默认 **https://api.deepseek.com** |
 | ③ | 模型填 **deepseek-v4-flash**（或 deepseek-v4-pro，后者更强） |
 | ④ | 粘贴你的 API Key（去 [platform.deepseek.com](https://platform.deepseek.com) 注册→API Keys→创建→复制 `sk-...`） |
-| ⑤ | 工作模式选 **⚡ Slot** |
+| ⑤ | 工作模式选 **⚡ Slot** |其实Deepseek原厂服务不支持slot模式，但是仍然可在此框架下使用，运行逻辑上没有区别，不需要专门调整模式，如果以后本地部署的大模型支持SLOT模式了，就可以直接用。
 | ⑥ | 点保存 |
 | ⑦ | 点「🔗 测试连接」→ 显示 ✅ 就对了 |
 
